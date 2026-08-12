@@ -22,9 +22,9 @@ For Open Day, use only a dedicated, restricted, event-specific key. Create it sh
 
 1. Locally validates a visitor question and blocks common personal-information, unsafe-content, off-topic, and prompt-injection patterns.
 2. Selects curated evidence for the University of Melbourne and the configured comparator.
-3. Runs 2–5 debate rounds, with both advocates generated in parallel within each round and each message revealed at least two seconds apart.
+3. Runs 2–5 debate rounds. Both advocate calls start in parallel within each round, while the visible messages always appear University of Melbourne first and Comparator second, at least two seconds apart.
 4. Holds a visible Judge deliberation for at least three seconds, then returns the controlled first verdict.
-5. Waits for the visitor to challenge the result before revealing the prompt mismatch and public compromised policy line.
+5. Switches to a narrative-focus view and asks **Would you trust this verdict?**. Both **It looks convincing** and **Something feels off** continue to the same mandatory X-Ray; the response is not stored.
 6. Waits for the visitor to start a clean re-check of the unchanged transcript with anonymised, order-reversed verifier calls.
 7. Shows consensus, or `depends` when the clean judges disagree.
 8. Clears visitor content on reset or inactivity.
@@ -46,7 +46,7 @@ There is no application server in the deployed topology. GitHub Pages serves the
 
 Runtime configuration is stored under the versioned `sessionStorage` namespace `unimelb-open-day-2026:session-config:v2`. Loading, saving, or clearing v2 configuration removes the obsolete v1 value. Configuration must never be moved to `localStorage`, cookies, source code, build-time environment variables, URLs, analytics, or logs.
 
-Because the prompts, evidence packs, policy hash, and enforcement logic are shipped to the browser, the Integrity X-Ray is a teaching aid rather than remote attestation or a security boundary.
+Because the prompts, evidence packs, policy hash, and enforcement logic are shipped to the browser, the Integrity X-Ray is a teaching aid rather than remote attestation or a security boundary. Its plain-language explanation is shown first; abbreviated SHA-256 values and production limitations remain under **Technical details (optional)**.
 
 ## Prerequisites
 
@@ -111,7 +111,7 @@ Open **Operator setup** before visitors arrive. The setup panel is deliberately 
    - Compromised Verifier;
    - Clean Verifier pair.
 6. Select a model and reasoning effort for each role. The supported setup choices are `gpt-5.6-luna`, `gpt-5.6-terra`, and `gpt-5.6-sol`, with `none`, `low`, `medium`, `high`, `xhigh`, or `max` reasoning where supported by the selected model.
-7. Save for this tab session, then run one sample-chip question through **Really? Inspect the judge** and **Run a clean re-check**.
+7. Save for this tab session, then run one sample-chip question through **Would you trust this verdict?**, choose either visitor response, inspect the X-Ray, and select **Run a clean re-check**.
 
 The visitor UI is English-only for this event. Debate pacing is intentionally not configurable: every advocate message is separated by at least two seconds, and the first verdict appears only after at least three seconds of visible Judge deliberation. A live compromised flow makes `2 × rounds + 3` model calls before retries; Fair only makes `2 × rounds + 2`. More rounds increase duration and API cost.
 
@@ -140,7 +140,7 @@ On the school laptop:
 1. Use a dedicated, clean browser profile with unnecessary extensions disabled.
 2. Open the final GitHub Pages URL while the network is stable.
 3. Open **Operator setup**, rehearse Prepared demo mode, then configure the temporary live key if approved.
-4. Run one complete live flow and confirm debate → Judge deliberation → first verdict → visitor challenge → X-Ray → visitor-triggered clean re-check → final takeaway.
+4. Run one complete live flow and confirm debate → Judge deliberation → first verdict → visitor trust prediction → X-Ray → visitor-triggered clean re-check → final takeaway.
 5. Verify reset removes the previous visitor question and output.
 6. Enable chips-only mode for younger visitors or queues when required.
 7. Enter browser full-screen mode, keep the laptop attended, disable sleep and notifications, and retain quick access to Operator setup.

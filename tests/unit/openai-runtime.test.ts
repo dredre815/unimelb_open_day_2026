@@ -242,8 +242,15 @@ describe("browser Responses API orchestration", () => {
         const roundRequests = debateRequests.filter(
           (request) => userPayload(request).roundIndex === roundIndex,
         );
+        const roundMessages = messages.filter(
+          ({ event }) => event.roundIndex === roundIndex,
+        );
         expect(roundRequests).toHaveLength(2);
         expect(roundRequests[0]!.at).toBe(roundRequests[1]!.at);
+        expect(roundMessages.map(({ event }) => event.agent)).toEqual([
+          "unimelb",
+          "competitor",
+        ]);
         expect(
           roundRequests.every((request) => {
             const priorTranscript = userPayload(request).priorTranscript;

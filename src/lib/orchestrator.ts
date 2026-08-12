@@ -827,10 +827,7 @@ export async function runDebate(
         unimelb: cloneTurn(fallbackRound.turns.unimelb),
         competitor: cloneTurn(fallbackRound.turns.competitor),
       };
-      const displayOrder: readonly AdvocateId[] =
-        roundIndex % 2 === 1
-          ? ["unimelb", "competitor"]
-          : ["competitor", "unimelb"];
+      const displayOrder: readonly AdvocateId[] = ["unimelb", "competitor"];
 
       for (const agent of displayOrder) {
         await sleepUntil(nextMessageDueAt, sessionSignal);

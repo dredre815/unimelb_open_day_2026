@@ -112,7 +112,9 @@ export function AttractScreen({
             TRUST THE VERDICT?
           </h1>
           <p className="mt-[clamp(0.45rem,1.2vh,1rem)] text-[clamp(1.15rem,2vw,2.25rem)] tracking-[0.01em] text-slate-200">
-            Three AIs. One hidden instruction.
+            {config.demoMode === "compromised"
+              ? "Three AIs. One hidden instruction."
+              : "Two advocates. Two clean order checks."}
           </p>
           <p className="mt-2 text-[clamp(0.95rem,1.15vw,1.25rem)] text-cyan-100">
             Choose a question. Two AIs debate; a third AI judges.

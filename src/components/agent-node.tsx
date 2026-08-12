@@ -55,7 +55,7 @@ export function AgentNode({
           {shortLabel}
         </div>
         <div className="min-w-0 flex-1">
-          <h2 className="truncate text-base font-semibold">{label}</h2>
+          <h2 className="text-[clamp(0.9rem,0.95vw,1.05rem)] font-semibold leading-tight">{label}</h2>
           <Badge
             variant="outline"
             className={cn(
@@ -75,7 +75,7 @@ export function AgentNode({
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto p-3">
-        <p className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+        <p className="mb-2 flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.12em] text-muted-foreground">
           <SearchIcon className="size-3.5" aria-hidden="true" />
           Retrieved evidence
         </p>
@@ -85,7 +85,7 @@ export function AgentNode({
               key={fact.id}
               type="button"
               variant="ghost"
-              className="h-auto min-h-12 w-full justify-start whitespace-normal rounded-lg border border-border/70 bg-background/35 px-3 py-2 text-left text-xs font-normal leading-snug text-slate-200 hover:border-cyan-400/45 hover:bg-accent"
+              className="h-auto min-h-12 w-full justify-start whitespace-normal rounded-lg border border-border/70 bg-background/35 px-3 py-2 text-left text-[0.9375rem] font-normal leading-snug text-slate-200 hover:border-cyan-400/45 hover:bg-accent"
               onClick={() => onOpenSource(fact)}
             >
               <span className="line-clamp-3">{fact.claim}</span>

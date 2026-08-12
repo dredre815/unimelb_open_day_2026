@@ -56,7 +56,7 @@ Spacing uses a 4px base with primary steps of 8, 12, 16, 24, 32, and 48px. Major
 
 - App shell: fixed viewport-height canvas with a quiet header.
 - Attract state: open central stage, one question-chip rail, one composer rail.
-- Debate state: two narrow advocate rails around a wide transcript, followed by one staged verdict/reveal/clean-result rail.
+- Debate state: two narrow advocate rails around a wide transcript, followed by one staged story rail. From the first verdict onward, the debate area becomes a compact locked-context strip and the story rail fills the remaining height.
 - Setup state: one full-width configuration surface with bands and table-like rows.
 - Tablet fallback: agent summaries become a two-column row above the transcript; verifier rail stays visible below it.
 
@@ -67,7 +67,7 @@ Spacing uses a 4px base with primary steps of 8, 12, 16, 24, 32, and 48px. Major
 - `ConnectionField`: decorative SVG paths with reduced-motion fallback.
 - `QuestionComposer`: sample chips, free-text input, disclosure, primary action.
 - `Transcript`: visitor question and 4–10 attributed debate messages, labelled by round and automatically scrolled to the newest reveal.
-- `DebateStory`: visible Judge deliberation, controlled first verdict, visitor challenge, X-Ray diff, visitor-triggered clean re-check, and final result.
+- `DebateStory`: visible Judge deliberation, controlled first verdict, two-option visitor trust prediction, plain-language X-Ray, visitor-triggered clean re-check, and final result. Technical hashes are available only in optional details.
 - `SetupPanel`: temporary key controls, agent configuration rows, global runtime switches, save action.
 - `SourceDrawer`: in-app evidence details; never navigates the kiosk away.
 - `FinalTakeaway`: final fair verdict and security lesson.
@@ -93,7 +93,9 @@ The staged story must include:
 
 - `Verifier / Judge is deciding…`
 - `Not the final fair result`
-- `Really? Inspect the judge`
+- `Would you trust this verdict?`
+- `It looks convincing`
+- `Something feels off`
 - `Decision policy failed`
 - `The debate did not change. The hidden objective did.`
 - `Run a clean re-check`
@@ -107,7 +109,7 @@ Do not add a hero eyebrow, promotional badge, fake metric, ranking, ATAR, fee, s
 - Reasoning choices: `none`, `low`, `medium`, `high`, `xhigh`, `max`.
 - Default advocates: Luna / none.
 - Default compromised and clean verifiers: Terra / low.
-- Debate rounds: 2–5, default 2. Each round contains one response from each advocate.
+- Debate rounds: 2–5, default 2. Each round starts both advocate calls in parallel, then displays the University of Melbourne response before the Comparator response.
 - Pacing is fixed, not configurable: advocate messages are at least two seconds apart and Judge deliberation is visible for at least three seconds.
 - Visitor UI is English-only for this event.
 - The API key field is masked by default and requires explicit client-side risk acknowledgement before live mode can be saved.

@@ -80,7 +80,7 @@ function eventsOfType<TType extends SessionEvent["type"]>(
 
 describe("round-based canned orchestration", () => {
   it.each([2, 5])(
-    "emits %i complete rounds with alternating speakers and fixed presentation gaps",
+    "emits %i complete rounds with Melbourne first and fixed presentation gaps",
     async (debateRoundCount) => {
       const { timedEvents, events, fetchSpy, result } = await runCanned(
         "compromised",
@@ -107,11 +107,10 @@ describe("round-based canned orchestration", () => {
         const roundMessages = messages.filter(
           ({ event }) => event.roundIndex === roundIndex,
         );
-        expect(roundMessages.map(({ event }) => event.agent)).toEqual(
-          roundIndex % 2 === 1
-            ? ["unimelb", "competitor"]
-            : ["competitor", "unimelb"],
-        );
+        expect(roundMessages.map(({ event }) => event.agent)).toEqual([
+          "unimelb",
+          "competitor",
+        ]);
         expect(roundMessages.every(({ event }) => event.roundCount === debateRoundCount)).toBe(
           true,
         );

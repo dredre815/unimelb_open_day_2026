@@ -1,6 +1,13 @@
 "use client";
 
-import { RotateCcwIcon, ShieldCheckIcon, WifiOffIcon } from "lucide-react";
+import {
+  CheckCircle2Icon,
+  LockKeyholeIcon,
+  MessageSquareTextIcon,
+  RotateCcwIcon,
+  ShieldCheckIcon,
+  WifiOffIcon,
+} from "lucide-react";
 import { AgentNode } from "@/components/agent-node";
 import { ChatTranscript, type TranscriptMessage } from "@/components/chat-transcript";
 import { DebateStory } from "@/components/debate-story";
@@ -77,6 +84,13 @@ export function DebateStage({
   onOpenSource,
 }: DebateStageProps) {
   const comparatorName = config.comparatorMode === "named" ? "Monash University Advocate" : "Comparator Advocate";
+  const narrativeFocus =
+    compromisedVerdict !== undefined ||
+    (config.demoMode === "fair" && (phase === "fair_recheck" || fairVerdict !== undefined));
+  const completedRounds = messages.reduce(
+    (latest, message) => Math.max(latest, message.roundIndex),
+    0,
+  );
 
   return (
     <main className="kiosk-grid flex h-dvh min-h-0 flex-col overflow-hidden p-3" data-testid="debate-stage">
@@ -120,26 +134,59 @@ export function DebateStage({
         </p>
       ) : null}
 
-      <div className="grid min-h-0 flex-1 grid-rows-[minmax(0,1.05fr)_minmax(18rem,0.72fr)] gap-3">
-        <div className="grid min-h-0 grid-cols-[minmax(13.5rem,0.72fr)_minmax(25rem,1.65fr)_minmax(13.5rem,0.72fr)] gap-3">
-          <AgentNode
-            side="unimelb"
-            label="University of Melbourne Advocate"
-            shortLabel="M"
-            status={statuses.unimelb}
-            evidence={evidence.unimelb}
-            onOpenSource={onOpenSource}
-          />
-          <ChatTranscript question={question} messages={messages} />
-          <AgentNode
-            side="competitor"
-            label={comparatorName}
-            shortLabel="C"
-            status={statuses.competitor}
-            evidence={evidence.competitor}
-            onOpenSource={onOpenSource}
-          />
-        </div>
+      <div
+        className={
+          narrativeFocus
+            ? "grid min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)] gap-3"
+            : "grid min-h-0 flex-1 grid-rows-[minmax(0,1.05fr)_minmax(18rem,0.72fr)] gap-3"
+        }
+      >
+        {narrativeFocus ? (
+          <section
+            className="glass-panel grid min-h-[5.25rem] grid-cols-[minmax(0,1.4fr)_auto_auto] items-center gap-5 rounded-2xl px-5 py-3 max-[860px]:grid-cols-1 max-[860px]:gap-2"
+            aria-label="Locked debate context"
+          >
+            <div className="flex min-w-0 items-center gap-3">
+              <span className="grid size-11 shrink-0 place-items-center rounded-full border border-cyan-300/35 bg-cyan-400/10 text-cyan-100">
+                <MessageSquareTextIcon className="size-5" aria-hidden="true" />
+              </span>
+              <div className="min-w-0">
+                <p className="text-xs font-bold uppercase tracking-[0.16em] text-cyan-200">Question under review</p>
+                <p className="break-words text-base font-semibold leading-snug text-white">
+                  “{question}”
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 text-sm text-slate-200">
+              <CheckCircle2Icon className="size-5 text-emerald-300" aria-hidden="true" />
+              {completedRounds}/{config.debateRoundCount} rounds complete
+            </div>
+            <div className="flex items-center gap-2 text-sm text-slate-200">
+              <LockKeyholeIcon className="size-5 text-amber-200" aria-hidden="true" />
+              Debate and evidence locked
+            </div>
+          </section>
+        ) : (
+          <div className="grid min-h-0 grid-cols-[minmax(13.5rem,0.72fr)_minmax(25rem,1.65fr)_minmax(13.5rem,0.72fr)] gap-3">
+            <AgentNode
+              side="unimelb"
+              label="University of Melbourne Advocate"
+              shortLabel="M"
+              status={statuses.unimelb}
+              evidence={evidence.unimelb}
+              onOpenSource={onOpenSource}
+            />
+            <ChatTranscript question={question} messages={messages} />
+            <AgentNode
+              side="competitor"
+              label={comparatorName}
+              shortLabel="C"
+              status={statuses.competitor}
+              evidence={evidence.competitor}
+              onOpenSource={onOpenSource}
+            />
+          </div>
+        )}
         <DebateStory
           phase={phase}
           checks={checks}

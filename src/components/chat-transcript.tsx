@@ -60,16 +60,16 @@ export function ChatTranscript({ question, messages }: ChatTranscriptProps) {
                 )}
               >
                 <div className="mb-1.5 flex items-center justify-between gap-3">
-                  <span className={cn("text-xs font-bold uppercase tracking-wider", melbourne ? "text-blue-200" : "text-violet-200")}>
+                  <span className={cn("text-sm font-bold uppercase tracking-wider", melbourne ? "text-blue-200" : "text-violet-200")}>
                     {melbourne ? "Melbourne advocate" : "Comparator advocate"}
                   </span>
-                  <span className="text-xs text-muted-foreground">
+                  <span className="text-sm text-muted-foreground">
                     Round {message.roundIndex}/{message.roundCount} · {message.turnKind}
                   </span>
                 </div>
-                <p className="text-sm leading-relaxed text-slate-100">{message.turn.message}</p>
+                <p className="text-[clamp(1.125rem,1.2vw,1.25rem)] leading-relaxed text-slate-100">{message.turn.message}</p>
                 {message.turn.claims.some((claim) => claim.evidenceIds.length > 0) ? (
-                  <p className="mt-2 text-xs text-emerald-200/85">
+                  <p className="mt-2 text-[0.9375rem] text-emerald-200/85">
                     Evidence: {message.turn.claims.flatMap((claim) => claim.evidenceIds).join(", ")}
                   </p>
                 ) : null}

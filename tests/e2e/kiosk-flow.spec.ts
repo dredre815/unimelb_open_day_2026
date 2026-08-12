@@ -38,13 +38,19 @@ async function chooseFirstSample(page: Page): Promise<void> {
 test("runs the canned compromised flow and resets visitor content", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByTestId("attract-screen")).toBeVisible();
+  await page.getByRole("button", { name: "Operator setup" }).click();
+  await page
+    .getByRole("radiogroup", { name: "Debate rounds" })
+    .getByRole("radio", { name: "3", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Save & enter kiosk" }).click();
   await chooseFirstSample(page);
   const startedAt = Date.now();
   await page.getByRole("button", { name: "Start Debate" }).click();
 
   await expect(page.getByTestId("debate-stage")).toBeVisible();
   const transcriptMessages = page.locator("[aria-labelledby='transcript-heading'] article");
-  const revealButton = page.getByRole("button", { name: "Really? Inspect the judge" });
+  const revealButton = page.getByRole("button", { name: "It looks convincing" });
   const cleanButton = page.getByRole("button", { name: "Run a clean re-check" });
 
   await expect(transcriptMessages).toHaveCount(1, { timeout: 5_000 });
@@ -52,7 +58,7 @@ test("runs the canned compromised flow and resets visitor content", async ({ pag
   expect(firstMessageAt - startedAt).toBeGreaterThanOrEqual(1_750);
 
   const revealTimes = [firstMessageAt];
-  for (const count of [2, 3, 4]) {
+  for (const count of [2, 3, 4, 5, 6]) {
     await expect(transcriptMessages).toHaveCount(count, { timeout: 5_000 });
     revealTimes.push(Date.now());
   }
@@ -61,12 +67,30 @@ test("runs the canned compromised flow and resets visitor content", async ({ pag
     if (previousTimestamp === undefined) throw new Error("Missing message reveal timestamp");
     expect(timestamp - previousTimestamp).toBeGreaterThanOrEqual(1_750);
   }
+  const renderedMessages = await transcriptMessages.allTextContents();
+  expect(
+    renderedMessages.map((message) => message.match(/^(Melbourne|Comparator) advocate/)?.[1]),
+  ).toEqual([
+    "Melbourne",
+    "Comparator",
+    "Melbourne",
+    "Comparator",
+    "Melbourne",
+    "Comparator",
+  ]);
 
   const finalMessageAt = revealTimes.at(-1) ?? startedAt;
   await expect(page.getByText("Verifier / Judge is deciding…", { exact: true })).toBeVisible();
   await expect(revealButton).toHaveCount(0);
   await expect(revealButton).toBeVisible({ timeout: 8_000 });
   expect(Date.now() - finalMessageAt).toBeGreaterThanOrEqual(2_800);
+  await expect(page.getByText("Would you trust this verdict?", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "University of Melbourne" })).toBeFocused();
+  await expect(page.getByRole("button", { name: "Something feels off" })).toBeVisible();
+  await expect(revealButton).toBeInViewport();
+  await expect(page.getByRole("region", { name: "Locked debate context" })).toContainText(
+    "3/3 rounds complete",
+  );
   await expect(page.getByText("Not the final fair result", { exact: true })).toBeVisible();
   await expect(page.getByText("Decision policy failed", { exact: true })).toHaveCount(0);
   await expect(page.getByText("Clean result", { exact: true })).toHaveCount(0);
@@ -77,22 +101,40 @@ test("runs the canned compromised flow and resets visitor content", async ({ pag
     page.getByText("The judge’s instructions were changed.", { exact: true }),
   ).toBeVisible();
   await expect(
+    page.getByRole("heading", { name: "The judge’s instructions were changed." }),
+  ).toBeFocused();
+  await expect(
     page.getByText("The debate did not change. The hidden objective did.", { exact: true }),
   ).toBeVisible();
   await expect(cleanButton).toBeVisible();
+  await expect(cleanButton).toBeInViewport();
   await expect(page.getByText("Clean result", { exact: true })).toHaveCount(0);
 
   await page.getByRole("button", { name: "How we detected this" }).click();
-  await expect(page.getByText("Approved policy", { exact: true })).toBeVisible();
-  await expect(page.getByText("Active policy", { exact: true })).toBeVisible();
+  const fingerprintDialog = page.getByRole("dialog", { name: "How we detected the change" });
+  await expect(fingerprintDialog).toBeVisible();
+  await expect(fingerprintDialog).toBeInViewport();
+  await expect(page.getByText(/Think of a digital fingerprint as a short label/)).toBeVisible();
+  await expect(page.getByText("Find what changed", { exact: true })).toBeVisible();
+  await page.getByText("Technical details (optional)", { exact: true }).click();
+  await expect(page.getByText("Approved SHA-256", { exact: true })).toBeVisible();
+  await expect(page.getByText("Active SHA-256", { exact: true })).toBeVisible();
   await expect(page.getByText(/not full remote attestation/)).toBeVisible();
   await page.getByRole("button", { name: "Close" }).click();
 
   await cleanButton.click();
   await expect(page.getByText("Clean judges are checking both orders…", { exact: true })).toBeVisible();
   await expect(page.getByText("Clean result", { exact: true })).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByRole("heading", { name: "It depends" })).toBeFocused();
   await expect(page.getByText("Policy integrity: VERIFIED", { exact: true })).toBeVisible();
   await expect(page.getByText(/Order test: (consistent|sensitive)/)).toBeVisible();
+  await expect(
+    page.getByText(
+      "More agents do not automatically create trustworthy AI. Protect prompts, evidence and the decision process.",
+      { exact: true },
+    ),
+  ).toHaveCount(1);
+  await expect(page.getByRole("button", { name: "Ask another question" })).toBeInViewport();
 
   await page.getByRole("button", { name: "Ask another question" }).click();
   await expect(page.getByTestId("attract-screen")).toBeVisible();
@@ -107,6 +149,16 @@ test("keeps the visitor journey English-only and explains provider processing", 
   await expect(page.getByRole("button", { name: "EN", exact: true })).toHaveCount(0);
   await expect(page.getByText(/Educational AI demo\. Please do not enter personal information\./)).toBeVisible();
   await expect(page.getByText("Prepared demo mode does not call OpenAI.", { exact: true })).toBeVisible();
+});
+
+test("uses an honest attract promise for the fair-only story", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Operator setup" }).click();
+  await page.getByRole("radiogroup", { name: "Demo story" }).getByRole("radio", { name: "Fair only" }).click();
+  await page.getByRole("button", { name: "Save & enter kiosk" }).click();
+
+  await expect(page.getByText("Two advocates. Two clean order checks.", { exact: true })).toBeVisible();
+  await expect(page.getByText("Three AIs. One hidden instruction.", { exact: true })).toHaveCount(0);
 });
 
 test("rejects non-English free text without starting a debate", async ({ page }) => {

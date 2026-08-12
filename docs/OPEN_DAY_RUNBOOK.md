@@ -117,8 +117,9 @@ Then:
 2. Verify the key field is empty and Generation is **Prepared demo (recommended)**.
 3. Select the final comparator, visitor input, demo story, and debate rounds. Use the default 2 rounds unless the longer duration and API cost have been approved and rehearsed.
 4. Save, select an English sample chip, and watch all debate messages reveal at least two seconds apart.
-5. Verify at least three seconds of visible Judge deliberation, then use **Really? Inspect the judge** and **Run a clean re-check** to complete the narrative.
-6. Verify X-Ray wording, final takeaway, reset, and the selected question-chip state.
+5. Verify at least three seconds of visible Judge deliberation, then confirm the view switches to the locked debate context and **Would you trust this verdict?** prompt.
+6. Select both **It looks convincing** and **Something feels off** in separate rehearsals. Each must enter the same X-Ray without retaining the choice, then require **Run a clean re-check**.
+7. Verify the plain-language X-Ray explanation appears before the optional technical hashes, then verify the final takeaway, reset, and selected question-chip state.
 
 If Prepared demo mode fails, do not proceed to live mode. Use the printed explanation until the release is repaired and re-verified.
 
@@ -180,6 +181,8 @@ Opening:
 After the first verdict:
 
 > That sounded confident—and many of the facts were supported. But should we trust the decision?
+
+Invite the visitor to choose **It looks convincing** or **Something feels off**. Both choices intentionally continue to the same integrity X-Ray; the choice is not recorded.
 
 During the reveal:
 
