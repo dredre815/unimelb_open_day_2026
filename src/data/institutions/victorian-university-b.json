@@ -1,0 +1,111 @@
+{
+  "id": "victorian-university-b",
+  "displayName": "Victorian University B",
+  "profileDisclosure": "This generic demo profile is a neutral composite of approved Monash University facts. It is not a real institution and must not be presented as one.",
+  "facts": [
+    {
+      "id": "VB-GEN-01",
+      "institutionId": "victorian-university-b",
+      "category": "general",
+      "claim": "The demo comparator profile offers a dedicated three-year Bachelor of Information Technology at a large Victorian campus.",
+      "sourceTitle": "Bachelor of IT | Monash University",
+      "sourceUrl": "https://www.monash.edu/study/courses/find-a-course/information-technology-c2000",
+      "sourceType": "official",
+      "reviewedAt": "2026-08-11",
+      "tags": ["dedicated degree", "bachelor of information technology", "it", "course structure"],
+      "safeForPublicComparison": true,
+      "notes": "Generic demo profile derived from the named comparator's approved official-source evidence."
+    },
+    {
+      "id": "VB-BIT-01",
+      "institutionId": "victorian-university-b",
+      "category": "it_computing",
+      "claim": "The demo comparator profile includes a dedicated three-year Bachelor of Information Technology.",
+      "sourceTitle": "Bachelor of IT | Monash University",
+      "sourceUrl": "https://www.monash.edu/study/courses/find-a-course/information-technology-c2000",
+      "sourceType": "official",
+      "reviewedAt": "2026-08-11",
+      "tags": ["bachelor of information technology", "dedicated degree", "three years", "it", "computing"],
+      "safeForPublicComparison": true,
+      "notes": "Generic demo profile derived from the named comparator's approved official-source evidence."
+    },
+    {
+      "id": "VB-BIT-02",
+      "institutionId": "victorian-university-b",
+      "category": "flexibility",
+      "claim": "The demo comparator's IT course profile includes majors, minors and electives.",
+      "sourceTitle": "Bachelor of IT | Monash University",
+      "sourceUrl": "https://www.monash.edu/study/courses/find-a-course/information-technology-c2000",
+      "sourceType": "official",
+      "reviewedAt": "2026-08-11",
+      "tags": ["flexibility", "majors", "minors", "electives", "specialisation", "undecided"],
+      "safeForPublicComparison": true,
+      "notes": "Generic demo profile derived from the named comparator's approved official-source evidence."
+    },
+    {
+      "id": "VB-BIT-03",
+      "institutionId": "victorian-university-b",
+      "category": "cybersecurity_ai",
+      "claim": "The demo comparator profile lists artificial intelligence, cybersecurity, computer science, software development, games, data science and business AI systems as study areas.",
+      "sourceTitle": "Bachelor of IT | Monash University",
+      "sourceUrl": "https://www.monash.edu/study/courses/find-a-course/information-technology-c2000",
+      "sourceType": "official",
+      "reviewedAt": "2026-08-11",
+      "tags": ["ai", "artificial intelligence", "cybersecurity", "computer science", "software development", "games", "data science"],
+      "safeForPublicComparison": true,
+      "notes": "Generic demo profile derived from the named comparator's approved official-source evidence."
+    },
+    {
+      "id": "VB-CAREER-01",
+      "institutionId": "victorian-university-b",
+      "category": "career_learning",
+      "claim": "The demo comparator profile includes professional placement units and other work-integrated learning opportunities.",
+      "sourceTitle": "Bachelor of IT | Monash University",
+      "sourceUrl": "https://www.monash.edu/study/courses/find-a-course/information-technology-c2000",
+      "sourceType": "official",
+      "reviewedAt": "2026-08-11",
+      "tags": ["placement", "work integrated learning", "industry", "career"],
+      "safeForPublicComparison": true,
+      "notes": "Generic demo profile; no placement or employment outcome is guaranteed."
+    },
+    {
+      "id": "VB-CAMPUS-01",
+      "institutionId": "victorian-university-b",
+      "category": "campus",
+      "claim": "The demo comparator profile includes a large campus with sporting, cultural and educational facilities.",
+      "sourceTitle": "About Clayton campus | Monash University",
+      "sourceUrl": "https://www.monash.edu/about/our-locations/clayton-campus/about-clayton-campus",
+      "sourceType": "official",
+      "reviewedAt": "2026-08-12",
+      "tags": ["campus", "facilities", "sport", "culture", "beautiful"],
+      "safeForPublicComparison": true,
+      "notes": "Generic demo profile derived from approved Monash campus evidence; beauty remains subjective."
+    },
+    {
+      "id": "VB-CAMPUS-02",
+      "institutionId": "victorian-university-b",
+      "category": "campus",
+      "claim": "The demo comparator profile includes campus gardens with native trees and shrubs.",
+      "sourceTitle": "Gardens at Clayton | Monash University",
+      "sourceUrl": "https://www.monash.edu/about/our-locations/clayton-campus/gardens-at-clayton",
+      "sourceType": "official",
+      "reviewedAt": "2026-08-12",
+      "tags": ["campus", "garden", "trees", "nature", "beautiful"],
+      "safeForPublicComparison": true,
+      "notes": "Generic demo profile derived from approved Monash garden evidence; beauty remains subjective."
+    },
+    {
+      "id": "VB-LIFE-01",
+      "institutionId": "victorian-university-b",
+      "category": "student_life",
+      "claim": "The demo comparator profile includes student-run clubs and groups spanning social, cultural, academic, sporting and performing interests.",
+      "sourceTitle": "Clubs, societies and groups - Monash University",
+      "sourceUrl": "https://www.monash.edu/students/campus-life/clubs",
+      "sourceType": "official",
+      "reviewedAt": "2026-08-11",
+      "tags": ["clubs", "societies", "student life", "sport", "culture", "community"],
+      "safeForPublicComparison": true,
+      "notes": "Generic demo profile derived from the named comparator's approved official-source evidence."
+    }
+  ]
+}

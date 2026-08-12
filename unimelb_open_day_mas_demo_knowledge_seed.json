@@ -1,0 +1,166 @@
+{
+  "metadata": {
+    "purpose": "Seed evidence pack for the UniMelb Open Day 2026 multi-agent debate demo",
+    "lastReviewed": "2026-08-11",
+    "warning": "Review every source shortly before the event. Exclude volatile admissions, fees, rankings, employment and salary claims from P0."
+  },
+  "institutions": [
+    {
+      "id": "unimelb",
+      "displayName": "The University of Melbourne",
+      "facts": [
+        {
+          "id": "UM-CSS-01",
+          "institutionId": "unimelb",
+          "category": "it_computing",
+          "claim": "The Computing and Software Systems major is available through both the Bachelor of Science and the Bachelor of Design.",
+          "sourceTitle": "Computing and Software Systems - The University of Melbourne",
+          "sourceUrl": "https://study.unimelb.edu.au/find/courses/major/computing-and-software-systems/",
+          "sourceType": "official",
+          "reviewedAt": "2026-08-11",
+          "tags": ["it", "computing", "software", "bachelor of science", "bachelor of design", "flexibility"],
+          "safeForPublicComparison": true
+        },
+        {
+          "id": "UM-CSS-02",
+          "institutionId": "unimelb",
+          "category": "it_computing",
+          "claim": "The major develops practical skills in programming, analysing computer networks and software development processes.",
+          "sourceTitle": "Computing and Software Systems - The University of Melbourne",
+          "sourceUrl": "https://study.unimelb.edu.au/find/courses/major/computing-and-software-systems/",
+          "sourceType": "official",
+          "reviewedAt": "2026-08-11",
+          "tags": ["programming", "networks", "software development", "practical skills"],
+          "safeForPublicComparison": true
+        },
+        {
+          "id": "UM-CSS-03",
+          "institutionId": "unimelb",
+          "category": "course_structure",
+          "claim": "Bachelor of Science students can study computer science subjects from first year, complete foundational mathematics and computing, and take four advanced Computing and Software Systems subjects in third year.",
+          "sourceTitle": "Computing and Software Systems Major Structure",
+          "sourceUrl": "https://study.unimelb.edu.au/find/courses/major/computing-and-software-systems/structure/",
+          "sourceType": "official",
+          "reviewedAt": "2026-08-11",
+          "tags": ["first year", "course structure", "mathematics", "advanced computing", "third year"],
+          "safeForPublicComparison": true
+        },
+        {
+          "id": "UM-BSCI-01",
+          "institutionId": "unimelb",
+          "category": "flexibility",
+          "claim": "The Bachelor of Science offers more than 40 majors across science, biomedicine, mathematics, engineering and IT subjects.",
+          "sourceTitle": "Bachelor of Science - The University of Melbourne",
+          "sourceUrl": "https://study.unimelb.edu.au/find/courses/undergraduate/bachelor-of-science/",
+          "sourceType": "official",
+          "reviewedAt": "2026-08-11",
+          "tags": ["40 majors", "breadth", "flexibility", "science", "engineering", "it"],
+          "safeForPublicComparison": true
+        },
+        {
+          "id": "UM-IT-01",
+          "institutionId": "unimelb",
+          "category": "cybersecurity_ai",
+          "claim": "UniMelb's IT and computer science study area highlights AI, cybersecurity, internships and industry projects.",
+          "sourceTitle": "Information Technology and Computer Science | Study at Melbourne",
+          "sourceUrl": "https://study.unimelb.edu.au/find/study-areas/information-technology-and-computer-science/",
+          "sourceType": "official",
+          "reviewedAt": "2026-08-11",
+          "tags": ["ai", "cybersecurity", "internship", "industry project", "computer science"],
+          "safeForPublicComparison": true
+        },
+        {
+          "id": "UM-CAMPUS-01",
+          "institutionId": "unimelb",
+          "category": "campus",
+          "claim": "The Parkville campus is the University's historic main campus and combines heritage buildings around the Old Quadrangle with contemporary architecture, within walking distance of central Melbourne.",
+          "sourceTitle": "Open Day at the University of Melbourne",
+          "sourceUrl": "https://study.unimelb.edu.au/openday",
+          "sourceType": "official",
+          "reviewedAt": "2026-08-11",
+          "tags": ["campus", "heritage", "architecture", "old quadrangle", "city", "beautiful"],
+          "safeForPublicComparison": true,
+          "notes": "Beauty remains subjective; use this as descriptive evidence only."
+        },
+        {
+          "id": "UM-LIFE-01",
+          "institutionId": "unimelb",
+          "category": "student_life",
+          "claim": "The University states that students can explore more than 200 clubs and societies at Melbourne.",
+          "sourceTitle": "Open Day at the University of Melbourne",
+          "sourceUrl": "https://study.unimelb.edu.au/openday",
+          "sourceType": "official",
+          "reviewedAt": "2026-08-11",
+          "tags": ["clubs", "societies", "student life", "community"],
+          "safeForPublicComparison": true
+        }
+      ]
+    },
+    {
+      "id": "monash",
+      "displayName": "Monash University",
+      "facts": [
+        {
+          "id": "MO-BIT-01",
+          "institutionId": "monash",
+          "category": "it_computing",
+          "claim": "Monash offers a dedicated Bachelor of Information Technology at Clayton with a three-year full-time duration.",
+          "sourceTitle": "Bachelor of IT | Monash University",
+          "sourceUrl": "https://www.monash.edu/study/courses/find-a-course/information-technology-c2000",
+          "sourceType": "official",
+          "reviewedAt": "2026-08-11",
+          "tags": ["bachelor of information technology", "dedicated degree", "clayton", "three years", "it"],
+          "safeForPublicComparison": true
+        },
+        {
+          "id": "MO-BIT-02",
+          "institutionId": "monash",
+          "category": "flexibility",
+          "claim": "The Bachelor of Information Technology is described as flexible, with a broad range of majors, minors and electives.",
+          "sourceTitle": "Bachelor of IT | Monash University",
+          "sourceUrl": "https://www.monash.edu/study/courses/find-a-course/information-technology-c2000",
+          "sourceType": "official",
+          "reviewedAt": "2026-08-11",
+          "tags": ["flexibility", "majors", "minors", "electives", "specialisation"],
+          "safeForPublicComparison": true
+        },
+        {
+          "id": "MO-BIT-03",
+          "institutionId": "monash",
+          "category": "cybersecurity_ai",
+          "claim": "Listed areas include artificial intelligence, cybersecurity, computer science, software development, games and immersive media, data science and business AI systems.",
+          "sourceTitle": "Bachelor of IT | Monash University",
+          "sourceUrl": "https://www.monash.edu/study/courses/find-a-course/information-technology-c2000",
+          "sourceType": "official",
+          "reviewedAt": "2026-08-11",
+          "tags": ["ai", "cybersecurity", "computer science", "software development", "games", "data science"],
+          "safeForPublicComparison": true
+        },
+        {
+          "id": "MO-BIT-04",
+          "institutionId": "monash",
+          "category": "career_learning",
+          "claim": "The course page describes professional placement units and other work-integrated learning opportunities such as placements.",
+          "sourceTitle": "Bachelor of IT | Monash University",
+          "sourceUrl": "https://www.monash.edu/study/courses/find-a-course/information-technology-c2000",
+          "sourceType": "official",
+          "reviewedAt": "2026-08-11",
+          "tags": ["placement", "work integrated learning", "industry", "portfolio", "career"],
+          "safeForPublicComparison": true
+        },
+        {
+          "id": "MO-LIFE-01",
+          "institutionId": "monash",
+          "category": "student_life",
+          "claim": "Monash describes student-run clubs, societies and groups across interests including social, cultural, academic, political, sporting and performing activities.",
+          "sourceTitle": "Clubs, societies and groups - Monash University",
+          "sourceUrl": "https://www.monash.edu/students/campus-life/clubs",
+          "sourceType": "official",
+          "reviewedAt": "2026-08-11",
+          "tags": ["clubs", "societies", "student life", "sport", "culture", "community"],
+          "safeForPublicComparison": true
+        }
+      ]
+    }
+  ]
+}

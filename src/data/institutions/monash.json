@@ -1,0 +1,104 @@
+{
+  "id": "monash",
+  "displayName": "Monash University",
+  "facts": [
+    {
+      "id": "MO-GEN-01",
+      "institutionId": "monash",
+      "category": "general",
+      "claim": "Monash offers a dedicated Bachelor of Information Technology at its Clayton campus.",
+      "sourceTitle": "Bachelor of IT | Monash University",
+      "sourceUrl": "https://www.monash.edu/study/courses/find-a-course/information-technology-c2000",
+      "sourceType": "official",
+      "reviewedAt": "2026-08-11",
+      "tags": ["dedicated degree", "bachelor of information technology", "clayton", "it", "course structure"],
+      "safeForPublicComparison": true
+    },
+    {
+      "id": "MO-BIT-01",
+      "institutionId": "monash",
+      "category": "it_computing",
+      "claim": "Monash offers a dedicated Bachelor of Information Technology at Clayton with a three-year full-time duration.",
+      "sourceTitle": "Bachelor of IT | Monash University",
+      "sourceUrl": "https://www.monash.edu/study/courses/find-a-course/information-technology-c2000",
+      "sourceType": "official",
+      "reviewedAt": "2026-08-11",
+      "tags": ["bachelor of information technology", "dedicated degree", "clayton", "three years", "it", "computing"],
+      "safeForPublicComparison": true
+    },
+    {
+      "id": "MO-BIT-02",
+      "institutionId": "monash",
+      "category": "flexibility",
+      "claim": "The Bachelor of Information Technology is described as flexible, with a broad range of majors, minors and electives.",
+      "sourceTitle": "Bachelor of IT | Monash University",
+      "sourceUrl": "https://www.monash.edu/study/courses/find-a-course/information-technology-c2000",
+      "sourceType": "official",
+      "reviewedAt": "2026-08-11",
+      "tags": ["flexibility", "majors", "minors", "electives", "specialisation", "undecided"],
+      "safeForPublicComparison": true
+    },
+    {
+      "id": "MO-BIT-03",
+      "institutionId": "monash",
+      "category": "cybersecurity_ai",
+      "claim": "Listed areas include artificial intelligence, cybersecurity, computer science, software development, games and immersive media, data science and business AI systems.",
+      "sourceTitle": "Bachelor of IT | Monash University",
+      "sourceUrl": "https://www.monash.edu/study/courses/find-a-course/information-technology-c2000",
+      "sourceType": "official",
+      "reviewedAt": "2026-08-11",
+      "tags": ["ai", "artificial intelligence", "cybersecurity", "computer science", "software development", "games", "data science"],
+      "safeForPublicComparison": true
+    },
+    {
+      "id": "MO-BIT-04",
+      "institutionId": "monash",
+      "category": "career_learning",
+      "claim": "The course page describes professional placement units and other work-integrated learning opportunities such as placements.",
+      "sourceTitle": "Bachelor of IT | Monash University",
+      "sourceUrl": "https://www.monash.edu/study/courses/find-a-course/information-technology-c2000",
+      "sourceType": "official",
+      "reviewedAt": "2026-08-11",
+      "tags": ["placement", "work integrated learning", "industry", "portfolio", "career"],
+      "safeForPublicComparison": true,
+      "notes": "This does not guarantee a placement or employment outcome."
+    },
+    {
+      "id": "MO-CAMPUS-01",
+      "institutionId": "monash",
+      "category": "campus",
+      "claim": "Monash describes Clayton as its original and largest campus, with sporting, cultural and educational facilities and events.",
+      "sourceTitle": "About Clayton campus | Monash University",
+      "sourceUrl": "https://www.monash.edu/about/our-locations/clayton-campus/about-clayton-campus",
+      "sourceType": "official",
+      "reviewedAt": "2026-08-12",
+      "tags": ["campus", "clayton", "facilities", "sport", "culture", "student life", "location"],
+      "safeForPublicComparison": true
+    },
+    {
+      "id": "MO-CAMPUS-02",
+      "institutionId": "monash",
+      "category": "campus",
+      "claim": "Clayton campus gardens include native trees and shrubs, an Aboriginal garden and a River Red Gum estimated to be 400 to 500 years old.",
+      "sourceTitle": "Gardens at Clayton | Monash University",
+      "sourceUrl": "https://www.monash.edu/about/our-locations/clayton-campus/gardens-at-clayton",
+      "sourceType": "official",
+      "reviewedAt": "2026-08-12",
+      "tags": ["campus", "garden", "trees", "landscape", "beautiful", "nature", "clayton"],
+      "safeForPublicComparison": true,
+      "notes": "Beauty remains subjective; use this as descriptive evidence only."
+    },
+    {
+      "id": "MO-LIFE-01",
+      "institutionId": "monash",
+      "category": "student_life",
+      "claim": "Monash describes student-run clubs, societies and groups across social, cultural, academic, political, sporting and performing interests.",
+      "sourceTitle": "Clubs, societies and groups - Monash University",
+      "sourceUrl": "https://www.monash.edu/students/campus-life/clubs",
+      "sourceType": "official",
+      "reviewedAt": "2026-08-11",
+      "tags": ["clubs", "societies", "student life", "sport", "culture", "community"],
+      "safeForPublicComparison": true
+    }
+  ]
+}

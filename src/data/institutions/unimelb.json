@@ -1,0 +1,116 @@
+{
+  "id": "unimelb",
+  "displayName": "The University of Melbourne",
+  "facts": [
+    {
+      "id": "UM-GEN-01",
+      "institutionId": "unimelb",
+      "category": "general",
+      "claim": "The Melbourne curriculum combines a chosen major with electives and breadth subjects outside the student's core discipline.",
+      "sourceTitle": "The Melbourne curriculum at the University of Melbourne",
+      "sourceUrl": "https://study.unimelb.edu.au/study-with-us/the-melbourne-curriculum",
+      "sourceType": "official",
+      "reviewedAt": "2026-08-11",
+      "tags": ["melbourne curriculum", "major", "electives", "breadth", "flexibility", "undecided"],
+      "safeForPublicComparison": true
+    },
+    {
+      "id": "UM-CSS-01",
+      "institutionId": "unimelb",
+      "category": "it_computing",
+      "claim": "The Computing and Software Systems major is available through both the Bachelor of Science and the Bachelor of Design.",
+      "sourceTitle": "Computing and Software Systems - The University of Melbourne",
+      "sourceUrl": "https://study.unimelb.edu.au/find/courses/major/computing-and-software-systems/",
+      "sourceType": "official",
+      "reviewedAt": "2026-08-11",
+      "tags": ["it", "computing", "software", "computer science", "bachelor of science", "bachelor of design", "flexibility"],
+      "safeForPublicComparison": true
+    },
+    {
+      "id": "UM-CSS-02",
+      "institutionId": "unimelb",
+      "category": "it_computing",
+      "claim": "The major develops practical skills in programming, analysing computer networks and software development processes.",
+      "sourceTitle": "Computing and Software Systems - The University of Melbourne",
+      "sourceUrl": "https://study.unimelb.edu.au/find/courses/major/computing-and-software-systems/",
+      "sourceType": "official",
+      "reviewedAt": "2026-08-11",
+      "tags": ["programming", "coding", "networks", "software development", "practical skills", "career"],
+      "safeForPublicComparison": true
+    },
+    {
+      "id": "UM-CSS-03",
+      "institutionId": "unimelb",
+      "category": "course_structure",
+      "claim": "Bachelor of Science students can study computer science subjects from first year, complete foundational mathematics and computing, and take four advanced Computing and Software Systems subjects in third year.",
+      "sourceTitle": "Computing and Software Systems Major Structure",
+      "sourceUrl": "https://study.unimelb.edu.au/find/courses/major/computing-and-software-systems/structure/",
+      "sourceType": "official",
+      "reviewedAt": "2026-08-11",
+      "tags": ["first year", "course structure", "mathematics", "advanced computing", "third year"],
+      "safeForPublicComparison": true
+    },
+    {
+      "id": "UM-BSCI-01",
+      "institutionId": "unimelb",
+      "category": "flexibility",
+      "claim": "The Bachelor of Science offers more than 40 study areas and lets students use breadth subjects to explore disciplines outside science.",
+      "sourceTitle": "Bachelor of Science - The University of Melbourne",
+      "sourceUrl": "https://study.unimelb.edu.au/find/courses/undergraduate/bachelor-of-science/structure/",
+      "sourceType": "official",
+      "reviewedAt": "2026-08-11",
+      "tags": ["40 study areas", "breadth", "flexibility", "science", "electives", "undecided"],
+      "safeForPublicComparison": true
+    },
+    {
+      "id": "UM-IT-01",
+      "institutionId": "unimelb",
+      "category": "cybersecurity_ai",
+      "claim": "UniMelb's IT and computer science study area highlights artificial intelligence, cybersecurity, internships and industry projects.",
+      "sourceTitle": "Information Technology and Computer Science | Study at Melbourne",
+      "sourceUrl": "https://study.unimelb.edu.au/find/study-areas/information-technology-and-computer-science/",
+      "sourceType": "official",
+      "reviewedAt": "2026-08-11",
+      "tags": ["ai", "artificial intelligence", "cybersecurity", "internship", "industry project", "computer science"],
+      "safeForPublicComparison": true
+    },
+    {
+      "id": "UM-CAREER-01",
+      "institutionId": "unimelb",
+      "category": "career_learning",
+      "claim": "The University's IT and computer science study information includes opportunities described as internships and industry projects.",
+      "sourceTitle": "Information Technology and Computer Science | Study at Melbourne",
+      "sourceUrl": "https://study.unimelb.edu.au/find/study-areas/information-technology-and-computer-science/",
+      "sourceType": "official",
+      "reviewedAt": "2026-08-11",
+      "tags": ["career", "industry", "internship", "industry project", "experience"],
+      "safeForPublicComparison": true,
+      "notes": "This does not guarantee a placement, internship or employment outcome."
+    },
+    {
+      "id": "UM-CAMPUS-01",
+      "institutionId": "unimelb",
+      "category": "campus",
+      "claim": "The Parkville campus is the University's historic main campus and combines heritage buildings around the Old Quadrangle with contemporary architecture, within walking distance of central Melbourne.",
+      "sourceTitle": "Open Day at the University of Melbourne",
+      "sourceUrl": "https://study.unimelb.edu.au/openday",
+      "sourceType": "official",
+      "reviewedAt": "2026-08-11",
+      "tags": ["campus", "heritage", "architecture", "old quadrangle", "city", "beautiful", "location"],
+      "safeForPublicComparison": true,
+      "notes": "Beauty remains subjective; use this as descriptive evidence only."
+    },
+    {
+      "id": "UM-LIFE-01",
+      "institutionId": "unimelb",
+      "category": "student_life",
+      "claim": "The University states that students can explore more than 200 clubs and societies at Melbourne.",
+      "sourceTitle": "Open Day at the University of Melbourne",
+      "sourceUrl": "https://study.unimelb.edu.au/openday",
+      "sourceType": "official",
+      "reviewedAt": "2026-08-11",
+      "tags": ["clubs", "societies", "student life", "community"],
+      "safeForPublicComparison": true
+    }
+  ]
+}
