@@ -1,21 +1,19 @@
 import { expect, test, type Page } from "@playwright/test";
 
 const TEST_SESSION_KEY = "sk-aaaaaaaaaaaaaaaaaaaaaaaa";
-const SESSION_STORAGE_KEY = "unimelb-open-day-2026:session-config:v1";
+const SESSION_STORAGE_KEY = "unimelb-open-day-2026:session-config:v2";
 
 async function installLiveSession(page: Page): Promise<void> {
   const config = {
-    version: 1,
+    version: 2,
     apiKey: TEST_SESSION_KEY,
     runtimeMode: "live",
     demoMode: "compromised",
     comparatorMode: "generic",
     freeTextEnabled: true,
-    bilingualMode: true,
-    autoRevealDelayMs: 2_200,
+    debateRoundCount: 2,
     debaterTimeoutMs: 6_500,
     verifierTimeoutMs: 9_000,
-    totalSessionTimeoutMs: 25_000,
     maxRetries: 1,
     agents: {
       unimelbAdvocate: { model: "gpt-5.6-luna", reasoningEffort: "none" },
@@ -41,39 +39,85 @@ test("runs the canned compromised flow and resets visitor content", async ({ pag
   await page.goto("/");
   await expect(page.getByTestId("attract-screen")).toBeVisible();
   await chooseFirstSample(page);
+  const startedAt = Date.now();
   await page.getByRole("button", { name: "Start Debate" }).click();
 
   await expect(page.getByTestId("debate-stage")).toBeVisible();
-  await expect(page.getByText("Policy integrity: FAILED")).toBeVisible({ timeout: 15_000 });
-  await expect(page.getByText("Expected SHA-256", { exact: true })).toBeVisible();
-  await expect(page.getByText("Active SHA-256", { exact: true })).toBeVisible();
-  await expect(page.getByText(/not full remote attestation/)).toBeVisible();
-  await expect(page.getByText("Facts checked", { exact: true })).toBeVisible();
+  const transcriptMessages = page.locator("[aria-labelledby='transcript-heading'] article");
+  const revealButton = page.getByRole("button", { name: "Really? Inspect the judge" });
+  const cleanButton = page.getByRole("button", { name: "Run a clean re-check" });
+
+  await expect(transcriptMessages).toHaveCount(1, { timeout: 5_000 });
+  const firstMessageAt = Date.now();
+  expect(firstMessageAt - startedAt).toBeGreaterThanOrEqual(1_750);
+
+  const revealTimes = [firstMessageAt];
+  for (const count of [2, 3, 4]) {
+    await expect(transcriptMessages).toHaveCount(count, { timeout: 5_000 });
+    revealTimes.push(Date.now());
+  }
+  for (const [index, timestamp] of revealTimes.slice(1).entries()) {
+    const previousTimestamp = revealTimes[index];
+    if (previousTimestamp === undefined) throw new Error("Missing message reveal timestamp");
+    expect(timestamp - previousTimestamp).toBeGreaterThanOrEqual(1_750);
+  }
+
+  const finalMessageAt = revealTimes.at(-1) ?? startedAt;
+  await expect(page.getByText("Verifier / Judge is deciding…", { exact: true })).toBeVisible();
+  await expect(revealButton).toHaveCount(0);
+  await expect(revealButton).toBeVisible({ timeout: 8_000 });
+  expect(Date.now() - finalMessageAt).toBeGreaterThanOrEqual(2_800);
+  await expect(page.getByText("Not the final fair result", { exact: true })).toBeVisible();
+  await expect(page.getByText("Decision policy failed", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("Clean result", { exact: true })).toHaveCount(0);
+
+  await revealButton.click();
+  await expect(page.getByText("Decision policy failed", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText("The judge’s instructions were changed.", { exact: true }),
+  ).toBeVisible();
   await expect(
     page.getByText("The debate did not change. The hidden objective did.", { exact: true }),
   ).toBeVisible();
-  await expect(page.getByText("Fair result")).toBeVisible({ timeout: 15_000 });
-  await expect(page.getByText("Policy integrity: VERIFIED", { exact: true })).toBeVisible();
-  await expect(page.getByText(/Order test: (CONSISTENT|SENSITIVE)/)).toBeVisible();
-  await expect(
-    page.getByText(
-      "More agents do not automatically create trustworthy AI. Protect prompts, evidence and the decision process.",
-      { exact: true },
-    ).last(),
-  ).toBeVisible();
+  await expect(cleanButton).toBeVisible();
+  await expect(page.getByText("Clean result", { exact: true })).toHaveCount(0);
 
-  await page.getByRole("button", { name: "New question" }).click();
+  await page.getByRole("button", { name: "How we detected this" }).click();
+  await expect(page.getByText("Approved policy", { exact: true })).toBeVisible();
+  await expect(page.getByText("Active policy", { exact: true })).toBeVisible();
+  await expect(page.getByText(/not full remote attestation/)).toBeVisible();
+  await page.getByRole("button", { name: "Close" }).click();
+
+  await cleanButton.click();
+  await expect(page.getByText("Clean judges are checking both orders…", { exact: true })).toBeVisible();
+  await expect(page.getByText("Clean result", { exact: true })).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByText("Policy integrity: VERIFIED", { exact: true })).toBeVisible();
+  await expect(page.getByText(/Order test: (consistent|sensitive)/)).toBeVisible();
+
+  await page.getByRole("button", { name: "Ask another question" }).click();
   await expect(page.getByTestId("attract-screen")).toBeVisible();
   await expect(page.getByText("Visitor question")).toHaveCount(0);
   await expect(page.getByRole("textbox", { name: "University comparison question" })).toHaveValue("");
 });
 
-test("shows a Chinese privacy and provider-processing notice", async ({ page }) => {
+test("keeps the visitor journey English-only and explains provider processing", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "中文" }).click();
 
-  await expect(page.getByText(/教育用途的人工智能演示。请勿输入个人信息。/)).toBeVisible();
-  await expect(page.getByText("当前离线演示模式不会调用 OpenAI。", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "中文" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "EN", exact: true })).toHaveCount(0);
+  await expect(page.getByText(/Educational AI demo\. Please do not enter personal information\./)).toBeVisible();
+  await expect(page.getByText("Prepared demo mode does not call OpenAI.", { exact: true })).toBeVisible();
+});
+
+test("rejects non-English free text without starting a debate", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("textbox", { name: "University comparison question" }).fill(
+    "哪所大学的计算机科学课程更适合我？",
+  );
+  await page.getByRole("button", { name: "Start Debate" }).click();
+
+  await expect(page.getByText(/available in English only/)).toBeVisible();
+  await expect(page.getByTestId("debate-stage")).toHaveCount(0);
 });
 
 test("blocks prompt injection before a debate starts", async ({ page }) => {
@@ -91,25 +135,26 @@ test("blocks prompt injection before a debate starts", async ({ page }) => {
 test("opens detailed setup with the keyboard shortcut and stores only in sessionStorage", async ({ page }) => {
   await page.goto("/");
   await page.keyboard.press("Control+Shift+D");
-  await expect(page.getByRole("heading", { name: "Session setup" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Operator setup" })).toBeVisible();
   await expect(page.getByText("OpenAI API session")).toBeVisible();
+  await expect(page.getByText("Debate rounds", { exact: true })).toBeVisible();
+  await page.getByText("Configure models & thinking", { exact: true }).click();
   await expect(page.getByText("Melbourne Advocate", { exact: true })).toBeVisible();
   await expect(page.getByText("Clean judge pair", { exact: true })).toBeVisible();
+  await expect(page.getByText("Auto reveal delay", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("Language", { exact: true })).toHaveCount(0);
+  const rounds = page.getByRole("radiogroup", { name: "Debate rounds" });
+  await expect(rounds.getByRole("radio")).toHaveCount(4);
+  await expect(rounds.getByRole("radio", { name: "2", exact: true })).toBeChecked();
 
-  const setupContent = page.locator('[role="dialog"] .overflow-y-auto');
-  await setupContent.evaluate((element) => {
-    element.scrollTop = element.scrollHeight;
-  });
-  await expect(page.getByText("Auto reveal delay", { exact: true })).toBeVisible();
-
-  await page.getByRole("button", { name: /Save session & enter kiosk/ }).click();
-  await expect(page.getByRole("heading", { name: "Session setup" })).toHaveCount(0);
+  await page.getByRole("button", { name: /Save & enter kiosk/ }).click();
+  await expect(page.getByRole("heading", { name: "Operator setup" })).toHaveCount(0);
 
   const storage = await page.evaluate(() => ({
     sessionKeys: Object.keys(window.sessionStorage),
     localKeys: Object.keys(window.localStorage),
   }));
-  expect(storage.sessionKeys).toEqual(["unimelb-open-day-2026:session-config:v1"]);
+  expect(storage.sessionKeys).toEqual(["unimelb-open-day-2026:session-config:v2"]);
   expect(storage.localKeys).toEqual([]);
 });
 
@@ -133,7 +178,7 @@ test("does not reveal a saved key and cancels an in-flight connection test when 
       { exact: true },
     ),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Setup" }).click();
+  await page.getByRole("button", { name: "Operator setup" }).click();
   const keyInput = page.getByLabel("Temporary API key");
   await expect(keyInput).toHaveValue("");
   await expect(keyInput).toHaveAttribute("placeholder", "sk-••••••••aaaa");
@@ -180,7 +225,7 @@ test("clearing the key aborts an active live session before further model calls"
   await expect.poll(() => requestCount).toBe(2);
 
   try {
-    await page.getByRole("button", { name: "Setup" }).click();
+    await page.keyboard.press("Control+Shift+D");
     await page.getByRole("button", { name: "Clear key" }).click();
     await expect(page.getByTestId("attract-screen")).toBeVisible();
   } finally {
@@ -189,6 +234,20 @@ test("clearing the key aborts an active live session before further model calls"
 
   await page.waitForTimeout(1_200);
   expect(requestCount).toBe(2);
+});
+
+test("clears an abandoned active session after the inactivity timeout", async ({ page }) => {
+  await page.clock.install();
+  await page.goto("/");
+  await chooseFirstSample(page);
+  await page.getByRole("button", { name: "Start Debate" }).click();
+  await expect(page.getByTestId("debate-stage")).toBeVisible();
+
+  await page.clock.fastForward("01:31");
+
+  await expect(page.getByTestId("attract-screen")).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "University comparison question" })).toHaveValue("");
+  await expect(page.getByText("Visitor question")).toHaveCount(0);
 });
 
 test("keeps the document within both kiosk viewports", async ({ page }) => {

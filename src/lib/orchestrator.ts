@@ -33,7 +33,9 @@ import {
 } from "@/lib/telemetry";
 import type {
   AdvocateId,
+  DebateRound,
   DebateTurn,
+  DebateTurnKind,
   FairVerdict,
   IntegrityResult,
   RetrievedEvidence,
@@ -54,8 +56,98 @@ export type DebateEventEmitter = (
 ) => void | Promise<void>;
 
 export interface DebateTranscript {
-  openings: Record<AdvocateId, DebateTurn>;
-  rebuttals: Record<AdvocateId, DebateTurn>;
+  rounds: DebateRound[];
+}
+
+export interface DebateInteractionController {
+  reveal(): boolean;
+  runClean(): boolean;
+  abort(): void;
+}
+
+type InteractionStage =
+  | "idle"
+  | "awaiting_reveal"
+  | "revealed"
+  | "awaiting_clean_run"
+  | "clean_started"
+  | "complete"
+  | "aborted";
+
+interface InteractionRuntime {
+  controller: AbortController;
+  stage: InteractionStage;
+  pending?: {
+    action: "reveal" | "run_clean";
+    resolve: () => void;
+  };
+  arm(action: "reveal" | "run_clean", signal: AbortSignal): Promise<void>;
+  finish(): void;
+}
+
+const INTERACTION_RUNTIMES = new WeakMap<DebateInteractionController, InteractionRuntime>();
+
+export function createDebateInteractionController(): DebateInteractionController {
+  const runtime: InteractionRuntime = {
+    controller: new AbortController(),
+    stage: "idle",
+    arm(action, signal) {
+      const expectedStage = action === "reveal" ? "idle" : "revealed";
+      const waitingStage = action === "reveal" ? "awaiting_reveal" : "awaiting_clean_run";
+      if (runtime.stage !== expectedStage || runtime.controller.signal.aborted || signal.aborted) {
+        return Promise.reject(signal.reason ?? runtime.controller.signal.reason ?? abortError());
+      }
+
+      runtime.stage = waitingStage;
+      return new Promise<void>((resolve, reject) => {
+        const onAbort = () => {
+          cleanup();
+          runtime.pending = undefined;
+          runtime.stage = "aborted";
+          reject(signal.reason ?? abortError());
+        };
+        const cleanup = () => signal.removeEventListener("abort", onAbort);
+        runtime.pending = {
+          action,
+          resolve: () => {
+            cleanup();
+            runtime.pending = undefined;
+            runtime.stage = action === "reveal" ? "revealed" : "clean_started";
+            resolve();
+          },
+        };
+        signal.addEventListener("abort", onAbort, { once: true });
+      });
+    },
+    finish() {
+      runtime.pending = undefined;
+      if (runtime.stage !== "aborted") runtime.stage = "complete";
+    },
+  };
+
+  const interactions: DebateInteractionController = {
+    reveal() {
+      if (runtime.stage !== "awaiting_reveal" || runtime.pending?.action !== "reveal") {
+        return false;
+      }
+      runtime.pending.resolve();
+      return true;
+    },
+    runClean() {
+      if (runtime.stage !== "awaiting_clean_run" || runtime.pending?.action !== "run_clean") {
+        return false;
+      }
+      runtime.pending.resolve();
+      return true;
+    },
+    abort() {
+      if (runtime.stage === "complete" || runtime.stage === "aborted") return;
+      runtime.stage = "aborted";
+      runtime.controller.abort(abortError());
+    },
+  };
+  INTERACTION_RUNTIMES.set(interactions, runtime);
+  return interactions;
 }
 
 export interface DebateRunResult {
@@ -129,14 +221,23 @@ const ANONYMOUS_VERDICT_JSON_SCHEMA = toOpenAIJsonSchema(
   ANONYMOUS_VERDICT_SCHEMA,
 );
 
-const EMPTY_TURN: DebateTurn = {
-  message: "",
-  stanceSummary: "",
-  claims: [],
-};
+export const MIN_MESSAGE_GAP_MS = 2_000;
+export const MIN_JUDGE_DELAY_MS = 3_000;
+
+const ROUND_GOALS = [
+  "Make the strongest concise opening case for the visitor's criterion.",
+  "Answer the other advocate's strongest relevant point with approved evidence.",
+  "Test which evidence most directly addresses the visitor's stated criterion.",
+  "Explain the most important trade-off while acknowledging the other side's genuine strength.",
+  "Give a concise closing case without claiming universal superiority.",
+] as const;
 
 function now(): number {
   return typeof performance === "undefined" ? Date.now() : performance.now();
+}
+
+function abortError(): DOMException {
+  return new DOMException("The debate was cancelled.", "AbortError");
 }
 
 function createSessionId(): string {
@@ -145,16 +246,25 @@ function createSessionId(): string {
 
 async function sleep(durationMs: number, signal: AbortSignal): Promise<void> {
   if (durationMs <= 0) return;
-  if (signal.aborted) throw signal.reason;
+  if (signal.aborted) throw signal.reason ?? abortError();
 
   await new Promise<void>((resolve, reject) => {
-    const timeoutId = globalThis.setTimeout(resolve, durationMs);
+    const cleanup = () => signal.removeEventListener("abort", onAbort);
+    const timeoutId = globalThis.setTimeout(() => {
+      cleanup();
+      resolve();
+    }, durationMs);
     const onAbort = () => {
       globalThis.clearTimeout(timeoutId);
-      reject(signal.reason);
+      cleanup();
+      reject(signal.reason ?? abortError());
     };
     signal.addEventListener("abort", onAbort, { once: true });
   });
+}
+
+async function sleepUntil(timestampMs: number, signal: AbortSignal): Promise<void> {
+  await sleep(Math.max(0, timestampMs - now()), signal);
 }
 
 function combinePrompt(...parts: string[]): string {
@@ -265,11 +375,13 @@ function restoreCandidateLabels(
 
 async function generateAdvocateTurn(
   agent: AdvocateId,
-  turnKind: "opening" | "rebuttal",
+  roundIndex: number,
+  roundCount: number,
+  turnKind: DebateTurnKind,
   question: string,
   language: SupportedLanguage,
   evidence: RetrievedEvidence,
-  transcript: Partial<DebateTranscript>,
+  transcript: DebateTranscript,
   config: SessionConfig,
   signal: AbortSignal,
 ): Promise<CallMeta<DebateTurn>> {
@@ -291,13 +403,16 @@ async function generateAdvocateTurn(
         systemPrompt: combinePrompt(ADVOCATE_SHARED_PROMPT, rolePrompt),
         input: modelPayload(question, language, evidence, {
           assignedInstitution: agent,
+          roundIndex,
+          roundCount,
           turnKind,
+          roundGoal: ROUND_GOALS[roundIndex - 1],
           evidenceFacts: relevantEvidence.map(({ id, category, claim }) => ({
             id,
             category,
             claim,
           })),
-          priorTranscript: turnKind === "rebuttal" ? transcript.openings : undefined,
+          priorTranscript: transcript.rounds,
         }),
         schemaName: "debate_turn",
         schema: DEBATE_TURN_JSON_SCHEMA,
@@ -390,28 +505,22 @@ async function generateAnonymousVerdict(
     A: buildAnonymousEvidence("A", evidenceForA),
     B: buildAnonymousEvidence("B", evidenceForB),
   };
-  const candidateTranscript = {
-    A: anonymiseTurn(
-      transcript.openings[mapping.A],
-      candidateLabelByInstitution,
-      evidenceIdMap,
-    ),
-    B: anonymiseTurn(
-      transcript.openings[mapping.B],
-      candidateLabelByInstitution,
-      evidenceIdMap,
-    ),
-    rebuttalA: anonymiseTurn(
-      transcript.rebuttals[mapping.A],
-      candidateLabelByInstitution,
-      evidenceIdMap,
-    ),
-    rebuttalB: anonymiseTurn(
-      transcript.rebuttals[mapping.B],
-      candidateLabelByInstitution,
-      evidenceIdMap,
-    ),
-  };
+  const candidateTranscript = transcript.rounds.map((round) => ({
+    roundIndex: round.roundIndex,
+    turnKind: round.turnKind,
+    turns: {
+      A: anonymiseTurn(
+        round.turns[mapping.A],
+        candidateLabelByInstitution,
+        evidenceIdMap,
+      ),
+      B: anonymiseTurn(
+        round.turns[mapping.B],
+        candidateLabelByInstitution,
+        evidenceIdMap,
+      ),
+    },
+  }));
 
   const response = await withRetry(
     () =>
@@ -510,23 +619,44 @@ function cloneTurn(turn: DebateTurn): DebateTurn {
   };
 }
 
+function createLinkedController(parentSignal: AbortSignal): {
+  controller: AbortController;
+  cleanup: () => void;
+} {
+  const controller = new AbortController();
+  const abortFromParent = () => controller.abort(parentSignal.reason ?? abortError());
+  if (parentSignal.aborted) abortFromParent();
+  else parentSignal.addEventListener("abort", abortFromParent, { once: true });
+  return {
+    controller,
+    cleanup: () => parentSignal.removeEventListener("abort", abortFromParent),
+  };
+}
+
 export async function runDebate(
   question: string,
   config: SessionConfig,
   emit?: DebateEventEmitter,
   signal?: AbortSignal,
+  interactions?: DebateInteractionController,
 ): Promise<DebateRunResult> {
   const startedAt = now();
   const sessionId = createSessionId();
-  const totalController = new AbortController();
-  const presentationSignal = signal ?? new AbortController().signal;
-  const timeoutReason = new DOMException("Session timed out", "TimeoutError");
-  const totalTimeoutId = globalThis.setTimeout(
-    () => totalController.abort(timeoutReason),
-    config.totalSessionTimeoutMs,
-  );
-  const abortFromCaller = () => totalController.abort(signal?.reason);
-  signal?.addEventListener("abort", abortFromCaller, { once: true });
+  const sessionController = new AbortController();
+  const interactionRuntime = interactions ? INTERACTION_RUNTIMES.get(interactions) : undefined;
+  if (interactions && !interactionRuntime) {
+    throw new Error("Use createDebateInteractionController() to create debate interactions.");
+  }
+  const abortFromCaller = () => sessionController.abort(signal?.reason ?? abortError());
+  const abortFromInteractions = () =>
+    sessionController.abort(interactionRuntime?.controller.signal.reason ?? abortError());
+  if (signal?.aborted) abortFromCaller();
+  else signal?.addEventListener("abort", abortFromCaller, { once: true });
+  if (interactionRuntime?.controller.signal.aborted) abortFromInteractions();
+  else interactionRuntime?.controller.signal.addEventListener("abort", abortFromInteractions, {
+    once: true,
+  });
+  const sessionSignal = sessionController.signal;
 
   let fallbackUsed = config.runtimeMode === "canned";
   let lastErrorCode: TelemetryErrorCode | null = null;
@@ -540,31 +670,40 @@ export async function runDebate(
   const competitorId = config.comparatorMode === "named" ? "monash" : undefined;
   const evidence = retrieveEvidence(safeQuestion, { competitorId });
   const transcript: DebateTranscript = {
-    openings: { unimelb: EMPTY_TURN, competitor: EMPTY_TURN },
-    rebuttals: { unimelb: EMPTY_TURN, competitor: EMPTY_TURN },
+    rounds: [],
   };
   let compromisedVerdict: Verdict | undefined;
   let integrity: IntegrityResult | undefined;
   let fairIntegrity: IntegrityResult;
-  let fairVerdict: FairVerdict;
+  let fairVerdict: FairVerdict | undefined;
 
   const recordUsage = (next: OpenAIUsage) => {
     usage = addTokenUsage(usage, next);
   };
   const announceFallback = async (error?: unknown) => {
+    const shouldAnnounce = !fallbackUsed;
     fallbackUsed = true;
     if (error) lastErrorCode = asErrorCode(error);
+    if (!shouldAnnounce) return;
     await emitEvent(emit, {
       type: "error.recoverable",
       code: error instanceof OpenAIClientError ? error.code : "CONTINUITY_MODE",
-      message: "Live generation was unavailable, so the prepared continuity transcript is being used.",
+      message: "Live AI was unavailable, so the prepared demo content is being used.",
     });
   };
 
   try {
+    if (sessionSignal.aborted) throw sessionSignal.reason ?? abortError();
     if (!safety.allowed) {
       const error = new Error(safety.publicMessage ?? "This question cannot enter the debate.");
       (error as Error & { code?: string }).code = safety.outcome;
+      throw error;
+    }
+    if (safety.language !== "en") {
+      const error = new Error(
+        "This Open Day demo is available in English only. Please choose an English question.",
+      );
+      (error as Error & { code?: string }).code = "unsupported_language";
       throw error;
     }
 
@@ -583,220 +722,156 @@ export async function runDebate(
       safety.language,
       config.comparatorMode === "named" ? "monash" : "victorian-university-b",
     );
-    const continuityDelay = async (durationMs: number) => {
-      if (config.runtimeMode === "canned" || fallbackUsed) {
-        await sleep(durationMs, presentationSignal);
-      }
+    const fallbackRounds = fallback.rounds.slice(0, config.debateRoundCount);
+    if (fallbackRounds.length !== config.debateRoundCount) {
+      throw new Error("The continuity package does not contain every configured debate round.");
+    }
+
+    const waitForInteraction = async (
+      action: "reveal" | "run_clean",
+      phase: "awaiting_reveal" | "awaiting_clean_run",
+    ) => {
+      const gate = interactionRuntime?.arm(action, sessionSignal) ?? Promise.resolve();
+      void gate.catch(() => undefined);
+      await emitEvent(emit, { type: "phase.changed", phase });
+      await gate;
     };
+
+    const presentationStartedAt = now();
     await emitEvent(emit, {
       type: "session.started",
       sessionId,
       mode: config.demoMode,
       fallbackUsed,
+      roundCount: config.debateRoundCount,
     });
-    await emitEvent(emit, { type: "phase.changed", phase: "opening_arguments" });
-    await Promise.all(
-      (["unimelb", "competitor"] as const).map((agent) =>
-        emitEvent(emit, { type: "agent.status", agent, status: "thinking" }),
-      ),
-    );
+    let nextMessageDueAt = presentationStartedAt + MIN_MESSAGE_GAP_MS;
+    let lastMessageVisibleAt = presentationStartedAt;
 
-    if (config.runtimeMode === "live" && !fallbackUsed) {
-      try {
-        const [unimelb, competitor] = await Promise.all([
-          generateAdvocateTurn(
-            "unimelb",
-            "opening",
-            safeQuestion,
-            safety.language,
-            evidence,
-            {},
-            config,
-            totalController.signal,
-          ),
-          generateAdvocateTurn(
-            "competitor",
-            "opening",
-            safeQuestion,
-            safety.language,
-            evidence,
-            {},
-            config,
-            totalController.signal,
-          ),
-        ]);
-        recordUsage(unimelb.usage);
-        recordUsage(competitor.usage);
-        transcript.openings = {
-          unimelb: unimelb.data,
-          competitor: competitor.data,
-        };
-      } catch (error) {
-        if (signal?.aborted) throw signal.reason;
-        await announceFallback(error);
-        transcript.openings = {
-          unimelb: cloneTurn(fallback.openings.unimelb),
-          competitor: cloneTurn(fallback.openings.competitor),
-        };
+    for (const fallbackRound of fallbackRounds) {
+      const { roundIndex, turnKind } = fallbackRound;
+      if (roundIndex === 1) {
+        await emitEvent(emit, { type: "phase.changed", phase: "opening_arguments" });
+      } else if (roundIndex === 2) {
+        await emitEvent(emit, { type: "phase.changed", phase: "rebuttals" });
       }
-    } else {
-      transcript.openings = {
-        unimelb: cloneTurn(fallback.openings.unimelb),
-        competitor: cloneTurn(fallback.openings.competitor),
-      };
-    }
-
-    await continuityDelay(fallback.timing.openingDelayMs);
-
-    for (const agent of ["unimelb", "competitor"] as const) {
-      await emitEvent(emit, { type: "agent.status", agent, status: "speaking" });
       await emitEvent(emit, {
-        type: "agent.message",
-        agent,
-        turnKind: "opening",
-        turn: transcript.openings[agent],
+        type: "round.started",
+        roundIndex,
+        roundCount: config.debateRoundCount,
+        turnKind,
       });
-    }
+      await Promise.all(
+        (["unimelb", "competitor"] as const).map((agent) =>
+          emitEvent(emit, { type: "agent.status", agent, status: "thinking" }),
+        ),
+      );
 
-    await emitEvent(emit, { type: "phase.changed", phase: "rebuttals" });
-    await Promise.all(
-      (["unimelb", "competitor"] as const).map((agent) =>
-        emitEvent(emit, { type: "agent.status", agent, status: "thinking" }),
-      ),
-    );
+      const liveRound = config.runtimeMode === "live" && !fallbackUsed;
+      let generatedTurns: Record<AdvocateId, DebateTurn> | undefined;
 
-    if (config.runtimeMode === "live" && !fallbackUsed) {
-      try {
-        const [unimelb, competitor] = await Promise.all([
+      if (liveRound) {
+        const linkedRound = createLinkedController(sessionSignal);
+        let firstRoundError: unknown;
+        const generate = (agent: AdvocateId) =>
           generateAdvocateTurn(
-            "unimelb",
-            "rebuttal",
+            agent,
+            roundIndex,
+            config.debateRoundCount,
+            turnKind,
             safeQuestion,
             safety.language,
             evidence,
             transcript,
             config,
-            totalController.signal,
-          ),
-          generateAdvocateTurn(
-            "competitor",
-            "rebuttal",
-            safeQuestion,
-            safety.language,
-            evidence,
-            transcript,
-            config,
-            totalController.signal,
-          ),
-        ]);
-        recordUsage(unimelb.usage);
-        recordUsage(competitor.usage);
-        transcript.rebuttals = {
-          unimelb: unimelb.data,
-          competitor: competitor.data,
-        };
-      } catch (error) {
-        if (signal?.aborted) throw signal.reason;
-        await announceFallback(error);
-        transcript.rebuttals = {
-          unimelb: cloneTurn(fallback.rebuttals.unimelb),
-          competitor: cloneTurn(fallback.rebuttals.competitor),
-        };
-      }
-    } else {
-      transcript.rebuttals = {
-        unimelb: cloneTurn(fallback.rebuttals.unimelb),
-        competitor: cloneTurn(fallback.rebuttals.competitor),
-      };
-    }
+            linkedRound.controller.signal,
+          ).catch((error: unknown) => {
+            if (!sessionSignal.aborted && firstRoundError === undefined) {
+              firstRoundError = error;
+              linkedRound.controller.abort(error);
+            }
+            throw error;
+          });
 
-    await continuityDelay(fallback.timing.rebuttalDelayMs);
-
-    for (const agent of ["unimelb", "competitor"] as const) {
-      await emitEvent(emit, { type: "agent.status", agent, status: "speaking" });
-      await emitEvent(emit, {
-        type: "agent.message",
-        agent,
-        turnKind: "rebuttal",
-        turn: transcript.rebuttals[agent],
-      });
-      await emitEvent(emit, { type: "agent.status", agent, status: "complete" });
-    }
-
-    if (config.demoMode === "compromised") {
-      await emitEvent(emit, { type: "phase.changed", phase: "verifying" });
-      await emitEvent(emit, { type: "agent.status", agent: "verifier", status: "checking" });
-      if (config.runtimeMode === "live" && !fallbackUsed) {
         try {
-          const generated = await generateVerdict(
-            true,
-            safeQuestion,
-            safety.language,
-            evidence,
-            transcript,
-            config,
-            totalController.signal,
-          );
-          recordUsage(generated.usage);
-          compromisedVerdict = enforceCompromisedWinner(
-            generated.data,
-            evidence,
-            safety.language,
-          );
-        } catch (error) {
-          if (signal?.aborted) throw signal.reason;
-          await announceFallback(error);
-          compromisedVerdict = enforceCompromisedWinner(
-            fallback.compromisedVerdict,
-            evidence,
-            safety.language,
-          );
+          const [unimelb, competitor] = await Promise.allSettled([
+            generate("unimelb"),
+            generate("competitor"),
+          ]);
+          if (sessionSignal.aborted) throw sessionSignal.reason ?? abortError();
+
+          if (unimelb.status === "fulfilled") recordUsage(unimelb.value.usage);
+          if (competitor.status === "fulfilled") recordUsage(competitor.value.usage);
+
+          if (unimelb.status === "fulfilled" && competitor.status === "fulfilled") {
+            generatedTurns = {
+              unimelb: unimelb.value.data,
+              competitor: competitor.value.data,
+            };
+          } else {
+            const rejectedReason =
+              unimelb.status === "rejected"
+                ? unimelb.reason
+                : competitor.status === "rejected"
+                  ? competitor.reason
+                  : new Error("A live debate round did not produce both turns.");
+            const error = firstRoundError ?? rejectedReason;
+            await announceFallback(error);
+          }
+        } finally {
+          linkedRound.cleanup();
         }
-      } else {
-        compromisedVerdict = enforceCompromisedWinner(
-          fallback.compromisedVerdict,
-          evidence,
-          safety.language,
-        );
       }
-      compromisedVerdict = validateVerdictEvidence(compromisedVerdict, [
-        ...evidence.unimelb,
-        ...evidence.competitor,
-      ]);
-      await continuityDelay(fallback.timing.verdictDelayMs);
-      await emitEvent(emit, {
-        type: "verifier.checks",
-        checks: compromisedVerdict.evidenceChecks,
-      });
-      await emitEvent(emit, {
-        type: "verdict.compromised",
-        verdict: compromisedVerdict,
-      });
-      try {
-        await sleep(
-          config.runtimeMode === "canned"
-            ? Math.min(config.autoRevealDelayMs, fallback.timing.revealDelayMs)
-            : config.autoRevealDelayMs,
-          presentationSignal,
-        );
-      } catch (error) {
-        if (signal?.aborted) throw signal.reason;
-        throw error;
+
+      const displayedTurns: Record<AdvocateId, DebateTurn> = generatedTurns ?? {
+        unimelb: cloneTurn(fallbackRound.turns.unimelb),
+        competitor: cloneTurn(fallbackRound.turns.competitor),
+      };
+      const displayOrder: readonly AdvocateId[] =
+        roundIndex % 2 === 1
+          ? ["unimelb", "competitor"]
+          : ["competitor", "unimelb"];
+
+      for (const agent of displayOrder) {
+        await sleepUntil(nextMessageDueAt, sessionSignal);
+        if (sessionSignal.aborted) throw sessionSignal.reason ?? abortError();
+
+        await emitEvent(emit, { type: "agent.status", agent, status: "speaking" });
+        await emitEvent(emit, {
+          type: "agent.message",
+          agent,
+          roundIndex,
+          roundCount: config.debateRoundCount,
+          turnKind,
+          turn: displayedTurns[agent],
+        });
+        lastMessageVisibleAt = now();
+        nextMessageDueAt = lastMessageVisibleAt + MIN_MESSAGE_GAP_MS;
+        await emitEvent(emit, { type: "agent.status", agent, status: "complete" });
       }
-      await emitEvent(emit, { type: "phase.changed", phase: "integrity_reveal" });
-      integrity = await activeIntegrityPromise!;
-      await emitEvent(emit, { type: "integrity.result", context: "active", result: integrity });
+
+      transcript.rounds.push({ roundIndex, turnKind, turns: displayedTurns });
       await emitEvent(emit, {
-        type: "xray.prompt_diff",
-        lines: integrity.changedLines,
+        type: "round.completed",
+        roundIndex,
+        roundCount: config.debateRoundCount,
+        turnKind,
       });
     }
 
-    await emitEvent(emit, { type: "phase.changed", phase: "fair_recheck" });
+    await emitEvent(emit, { type: "phase.changed", phase: "verifying" });
     await emitEvent(emit, { type: "agent.status", agent: "verifier", status: "checking" });
-    if (config.runtimeMode === "live" && !fallbackUsed) {
+    const judgeDelay = sleepUntil(
+      lastMessageVisibleAt + MIN_JUDGE_DELAY_MS,
+      sessionSignal,
+    );
+    void judgeDelay.catch(() => undefined);
+
+    const generateFairVerdict = async (): Promise<FairVerdict> => {
+      if (config.runtimeMode !== "live" || fallbackUsed) return fallback.fairVerdict;
+      const linkedClean = createLinkedController(sessionSignal);
       try {
-        const [first, reversed] = await Promise.all([
+        const cleanPair = Promise.all([
           generateAnonymousVerdict(
             { A: "unimelb", B: "competitor" },
             safeQuestion,
@@ -804,7 +879,7 @@ export async function runDebate(
             evidence,
             transcript,
             config,
-            totalController.signal,
+            linkedClean.controller.signal,
           ),
           generateAnonymousVerdict(
             { A: "competitor", B: "unimelb" },
@@ -813,19 +888,92 @@ export async function runDebate(
             evidence,
             transcript,
             config,
-            totalController.signal,
+            linkedClean.controller.signal,
           ),
         ]);
+        void cleanPair.catch((error: unknown) => linkedClean.controller.abort(error));
+        const [first, reversed] = await cleanPair;
         recordUsage(first.usage);
         recordUsage(reversed.usage);
-        fairVerdict = aggregateFairVerdicts(first.data, reversed.data);
+        return aggregateFairVerdicts(first.data, reversed.data);
       } catch (error) {
-        if (signal?.aborted) throw signal.reason;
+        if (sessionSignal.aborted) throw sessionSignal.reason ?? abortError();
         await announceFallback(error);
-        fairVerdict = fallback.fairVerdict;
+        return fallback.fairVerdict;
+      } finally {
+        linkedClean.cleanup();
       }
+    };
+
+    let fairVerdictPromise: Promise<FairVerdict> | undefined;
+    if (config.demoMode === "fair") {
+      fairVerdictPromise = generateFairVerdict();
+      void fairVerdictPromise.catch(() => undefined);
+    }
+
+    if (config.demoMode === "compromised") {
+      const generateCompromisedVerdict = async (): Promise<Verdict> => {
+        if (config.runtimeMode === "live" && !fallbackUsed) {
+          try {
+            const generated = await generateVerdict(
+              true,
+              safeQuestion,
+              safety.language,
+              evidence,
+              transcript,
+              config,
+              sessionSignal,
+            );
+            recordUsage(generated.usage);
+            return enforceCompromisedWinner(generated.data, evidence, safety.language);
+          } catch (error) {
+            if (sessionSignal.aborted) throw sessionSignal.reason ?? abortError();
+            await announceFallback(error);
+          }
+        }
+        return enforceCompromisedWinner(
+          fallback.compromisedVerdict,
+          evidence,
+          safety.language,
+        );
+      };
+      [compromisedVerdict] = await Promise.all([generateCompromisedVerdict(), judgeDelay]);
+      compromisedVerdict = validateVerdictEvidence(compromisedVerdict, [
+        ...evidence.unimelb,
+        ...evidence.competitor,
+      ]);
+      await emitEvent(emit, {
+        type: "verifier.checks",
+        checks: compromisedVerdict.evidenceChecks,
+      });
+      await emitEvent(emit, {
+        type: "verdict.compromised",
+        verdict: compromisedVerdict,
+      });
+      await emitEvent(emit, { type: "agent.status", agent: "verifier", status: "complete" });
+      await waitForInteraction("reveal", "awaiting_reveal");
+      await emitEvent(emit, { type: "phase.changed", phase: "integrity_reveal" });
+      integrity = await activeIntegrityPromise!;
+      await emitEvent(emit, { type: "integrity.result", context: "active", result: integrity });
+      await emitEvent(emit, {
+        type: "xray.prompt_diff",
+        lines: integrity.changedLines,
+      });
+      await waitForInteraction("run_clean", "awaiting_clean_run");
     } else {
-      fairVerdict = fallback.fairVerdict;
+      [fairVerdict] = await Promise.all([fairVerdictPromise!, judgeDelay]);
+    }
+
+    await emitEvent(emit, { type: "phase.changed", phase: "fair_recheck" });
+    await emitEvent(emit, { type: "agent.status", agent: "verifier", status: "checking" });
+    if (config.demoMode === "compromised") {
+      if (config.runtimeMode === "canned" || fallbackUsed) {
+        await sleep(1_200, sessionSignal);
+      }
+      fairVerdict = await generateFairVerdict();
+    }
+    if (!fairVerdict) {
+      throw new Error("The fair verifier did not produce a verdict.");
     }
 
     fairIntegrity = await fairIntegrityPromise;
@@ -834,7 +982,6 @@ export async function runDebate(
       context: "fair",
       result: fairIntegrity,
     });
-    await continuityDelay(fallback.timing.fairVerdictDelayMs);
     await emitEvent(emit, { type: "verdict.fair", verdict: fairVerdict });
     await emitEvent(emit, { type: "agent.status", agent: "verifier", status: "complete" });
     await emitEvent(emit, { type: "phase.changed", phase: "complete" });
@@ -845,6 +992,7 @@ export async function runDebate(
       durationMs,
       fallbackUsed,
     });
+    interactionRuntime?.finish();
     return {
       sessionId,
       transcript,
@@ -858,7 +1006,7 @@ export async function runDebate(
       telemetry: buildSessionTelemetry({
         sessionId,
         category: classification.category,
-        language: safety.language === "zh" ? "zh" : "en",
+        language: "en",
         durationMs,
         fallbackUsed,
         modelIds: [
@@ -872,7 +1020,8 @@ export async function runDebate(
       }),
     };
   } finally {
-    globalThis.clearTimeout(totalTimeoutId);
     signal?.removeEventListener("abort", abortFromCaller);
+    interactionRuntime?.controller.signal.removeEventListener("abort", abortFromInteractions);
+    if (interactionRuntime?.stage !== "complete") interactionRuntime?.finish();
   }
 }

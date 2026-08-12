@@ -5,7 +5,11 @@ import { AttractScreen, SAMPLE_QUESTIONS } from "@/components/attract-screen";
 import { DebateStage, type DebateUiPhase } from "@/components/debate-stage";
 import { SessionSetup } from "@/components/session-setup";
 import { SourceDrawer } from "@/components/source-drawer";
-import { runDebate } from "@/lib/orchestrator";
+import {
+  createDebateInteractionController,
+  runDebate,
+  type DebateInteractionController,
+} from "@/lib/orchestrator";
 import { retrieveEvidence } from "@/lib/retrieval";
 import { assessQuestion } from "@/lib/safety";
 import {
@@ -24,12 +28,13 @@ import type {
   PromptDiffLine,
   RetrievedEvidence,
   SessionEvent,
-  SupportedLanguage,
   Verdict,
 } from "@/types/debate";
 import type { TranscriptMessage } from "@/components/chat-transcript";
 
-const ALL_SAMPLE_QUESTIONS = new Set(Object.values(SAMPLE_QUESTIONS).flat());
+const ALL_SAMPLE_QUESTIONS: ReadonlySet<string> = new Set(SAMPLE_QUESTIONS);
+const ACTIVE_SESSION_IDLE_MS = 90_000;
+const COMPLETED_SESSION_IDLE_MS = 50_000;
 
 function cloneDefaultConfig(): SessionConfig {
   return {
@@ -114,6 +119,9 @@ function debateReducer(state: DebateState, action: DebateAction): DebateState {
       return { ...state, fallbackUsed: event.fallbackUsed };
     case "phase.changed":
       return { ...state, phase: event.phase };
+    case "round.started":
+    case "round.completed":
+      return state;
     case "agent.status":
       return { ...state, statuses: { ...state.statuses, [event.agent]: event.status } };
     case "agent.message":
@@ -149,7 +157,6 @@ export function KioskApp() {
   );
   const [configOverride, setConfigOverride] = useState<SessionConfig | null>(null);
   const config = configOverride ?? storedConfig ?? cloneDefaultConfig();
-  const [language, setLanguage] = useState<SupportedLanguage>("en");
   const [question, setQuestion] = useState("");
   const [questionError, setQuestionError] = useState<string | null>(null);
   const [showDebate, setShowDebate] = useState(false);
@@ -157,22 +164,14 @@ export function KioskApp() {
   const [selectedSource, setSelectedSource] = useState<EvidenceFact | null>(null);
   const [debate, dispatch] = useReducer(debateReducer, INITIAL_DEBATE_STATE);
   const abortRef = useRef<AbortController | null>(null);
+  const interactionRef = useRef<DebateInteractionController | null>(null);
   const autoResetRef = useRef<number | null>(null);
-
-  useEffect(() => {
-    const openOperatorSetup = (event: KeyboardEvent) => {
-      if (event.ctrlKey && event.shiftKey && event.key.toLocaleLowerCase() === "d") {
-        event.preventDefault();
-        setSetupOpen(true);
-      }
-    };
-    window.addEventListener("keydown", openOperatorSetup);
-    return () => window.removeEventListener("keydown", openOperatorSetup);
-  }, []);
 
   const resetKiosk = useCallback(() => {
     abortRef.current?.abort();
     abortRef.current = null;
+    interactionRef.current?.abort();
+    interactionRef.current = null;
     if (autoResetRef.current !== null) window.clearTimeout(autoResetRef.current);
     autoResetRef.current = null;
     dispatch({ type: "reset" });
@@ -182,11 +181,51 @@ export function KioskApp() {
     setShowDebate(false);
   }, []);
 
+  useEffect(() => {
+    const openOperatorSetup = (event: KeyboardEvent) => {
+      if (event.ctrlKey && event.shiftKey && event.key.toLocaleLowerCase() === "d") {
+        event.preventDefault();
+        if (showDebate) resetKiosk();
+        setSetupOpen(true);
+      }
+    };
+    window.addEventListener("keydown", openOperatorSetup);
+    return () => window.removeEventListener("keydown", openOperatorSetup);
+  }, [resetKiosk, showDebate]);
+
+  useEffect(() => {
+    if (!showDebate) return;
+
+    const scheduleIdleReset = () => {
+      if (autoResetRef.current !== null) window.clearTimeout(autoResetRef.current);
+      autoResetRef.current = window.setTimeout(
+        resetKiosk,
+        debate.phase === "complete" ? COMPLETED_SESSION_IDLE_MS : ACTIVE_SESSION_IDLE_MS,
+      );
+    };
+    const activityEvents = ["pointerdown", "keydown"] as const;
+    for (const eventName of activityEvents) {
+      window.addEventListener(eventName, scheduleIdleReset);
+    }
+    scheduleIdleReset();
+    return () => {
+      for (const eventName of activityEvents) {
+        window.removeEventListener(eventName, scheduleIdleReset);
+      }
+      if (autoResetRef.current !== null) window.clearTimeout(autoResetRef.current);
+      autoResetRef.current = null;
+    };
+  }, [debate.phase, resetKiosk, showDebate]);
+
   const handleStart = useCallback(async (candidateQuestion: string) => {
     const assessment = assessQuestion(candidateQuestion, {
       allowFreeText: config.freeTextEnabled,
       isSampleQuestion: ALL_SAMPLE_QUESTIONS.has(candidateQuestion.trim()),
     });
+    if (assessment.language !== "en") {
+      setQuestionError("This Open Day demo is available in English only. Please choose an English question.");
+      return;
+    }
     if (!assessment.allowed || !assessment.sanitizedQuestion) {
       setQuestionError(assessment.publicMessage ?? "Please choose a university comparison question.");
       return;
@@ -203,6 +242,8 @@ export function KioskApp() {
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
+    const interactions = createDebateInteractionController();
+    interactionRef.current = interactions;
 
     try {
       await runDebate(
@@ -211,11 +252,9 @@ export function KioskApp() {
         (event) => {
           if (abortRef.current !== controller) return;
           dispatch({ type: "event", event });
-          if (event.type === "session.complete") {
-            autoResetRef.current = window.setTimeout(resetKiosk, 50_000);
-          }
         },
         controller.signal,
+        interactions,
       );
     } catch (error) {
       if (controller.signal.aborted) return;
@@ -224,12 +263,11 @@ export function KioskApp() {
         message: error instanceof Error ? error.message : "The debate could not continue. Return to the question screen and try again.",
       });
     }
-  }, [config, resetKiosk]);
+  }, [config]);
 
   const handleSavedConfig = (nextConfig: SessionConfig) => {
     if (showDebate) resetKiosk();
     setConfigOverride(nextConfig);
-    if (!nextConfig.bilingualMode) setLanguage("en");
   };
 
   return (
@@ -251,16 +289,15 @@ export function KioskApp() {
           recoverableError={debate.recoverableError}
           config={config}
           onReset={resetKiosk}
-          onOpenSetup={() => setSetupOpen(true)}
+          onReveal={() => interactionRef.current?.reveal()}
+          onRunClean={() => interactionRef.current?.runClean()}
           onOpenSource={setSelectedSource}
         />
       ) : (
         <AttractScreen
           config={config}
-          language={language}
           question={question}
           error={questionError}
-          onLanguageChange={setLanguage}
           onQuestionChange={(value) => {
             setQuestion(value);
             setQuestionError(null);

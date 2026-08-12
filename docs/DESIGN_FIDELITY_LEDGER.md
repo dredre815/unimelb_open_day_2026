@@ -8,9 +8,9 @@ This ledger compares the generated concept references in `docs/design/concepts/`
 - **Colour:** The implemented navy, blue, cyan, violet, amber, red, and mint roles match the concept palette. Colour is never the only status signal; every state also has a text label or icon.
 - **Effects:** The connection trace, status pulse, message entrances, glass surfaces, and local integrity glitch reproduce the concept's control-room tone. Reduced-motion preferences suppress continuous motion.
 - **Density:** The attract view stays intentionally open. The active view is denser, but long transcript, evidence, and prompt content scroll only inside their own bounded panels.
-- **Interaction states:** The final application adds real disabled, focus, thinking, speaking, checking, failed-integrity, continuity, fair-result, and complete states that the static concepts could only imply.
-- **Setup deviation:** The final setup makes canned mode usable without a key, adds an explicit client-side key-risk acknowledgement, and exposes four configurable agent roles. These are functional requirements, so they intentionally replace the concept's illustrative connected state.
-- **X-Ray deviation:** The implementation shows the complete public compromised fragment and states that deterministic code enforcement is also involved. This is more explicit than the concept and is required for an accurate educational explanation.
+- **Interaction states:** The final application adds real disabled, focus, thinking, speaking, Judge-deliberating, controlled-first-verdict, visitor-challenge, failed-integrity, clean-recheck, fair-result, and complete states that the static concepts could only imply.
+- **Setup deviation:** The final setup makes Prepared demo mode usable without a key, adds an explicit client-side key-risk acknowledgement, exposes four configurable agent roles, and lets the operator choose 2–5 rounds. These functional requirements intentionally replace the concept's illustrative connected state.
+- **X-Ray deviation:** The implementation withholds the X-Ray until the visitor selects **Really? Inspect the judge**, then withholds the clean calls until **Run a clean re-check**. Technical hashes sit behind progressive disclosure so the core lesson remains readable at kiosk distance.
 
 ## Verification artifacts
 

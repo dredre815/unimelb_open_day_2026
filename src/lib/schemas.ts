@@ -7,6 +7,7 @@ export const QuestionCategorySchema = z.enum(["objective", "subjective", "mixed"
 export const AdvocateIdSchema = z.enum(["unimelb", "competitor"]);
 export const AgentIdSchema = z.enum(["unimelb", "competitor", "verifier"]);
 export const WinnerSchema = z.enum(["unimelb", "competitor", "tie", "depends"]);
+export const DebateTurnKindSchema = z.enum(["opening", "rebuttal"]);
 export const EvidenceCategorySchema = z.enum(EVIDENCE_CATEGORIES);
 export const FallbackCategorySchema = z.enum(FALLBACK_CATEGORIES);
 
@@ -42,6 +43,15 @@ export const DebateTurnSchema = z.strictObject({
   message: z.string().min(1).max(700),
   stanceSummary: z.string().max(180),
   claims: z.array(DebateClaimSchema).max(5),
+});
+
+export const DebateRoundSchema = z.strictObject({
+  roundIndex: z.number().int().min(1).max(5),
+  turnKind: DebateTurnKindSchema,
+  turns: z.strictObject({
+    unimelb: DebateTurnSchema,
+    competitor: DebateTurnSchema,
+  }),
 });
 
 export const EvidenceCheckSchema = z.strictObject({
@@ -115,14 +125,6 @@ export const SafetyAssessmentSchema = z.strictObject({
   sanitizedQuestion: z.string().max(240).optional(),
 });
 
-export const FallbackTimingSchema = z.strictObject({
-  openingDelayMs: z.number().int().nonnegative(),
-  rebuttalDelayMs: z.number().int().nonnegative(),
-  verdictDelayMs: z.number().int().nonnegative(),
-  revealDelayMs: z.number().int().nonnegative(),
-  fairVerdictDelayMs: z.number().int().nonnegative(),
-});
-
 export const FallbackIntegrityRevealSchema = z.strictObject({
   passed: z.literal(false),
   publicLabel: z.literal("Policy integrity: FAILED"),
@@ -135,18 +137,32 @@ export const FallbackPackageSchema = z.strictObject({
   language: SupportedLanguageSchema,
   category: FallbackCategorySchema,
   sampleQuestion: z.string().min(1).max(240),
-  openings: z.strictObject({
-    unimelb: DebateTurnSchema,
-    competitor: DebateTurnSchema,
-  }),
-  rebuttals: z.strictObject({
-    unimelb: DebateTurnSchema,
-    competitor: DebateTurnSchema,
-  }),
+  rounds: z
+    .array(DebateRoundSchema)
+    .min(2)
+    .max(5)
+    .superRefine((rounds, context) => {
+      rounds.forEach((round, index) => {
+        if (round.roundIndex !== index + 1) {
+          context.addIssue({
+            code: "custom",
+            path: [index, "roundIndex"],
+            message: "Round indexes must be sequential and one-based.",
+          });
+        }
+        const expectedKind = index === 0 ? "opening" : "rebuttal";
+        if (round.turnKind !== expectedKind) {
+          context.addIssue({
+            code: "custom",
+            path: [index, "turnKind"],
+            message: `Round ${index + 1} must use the ${expectedKind} turn kind.`,
+          });
+        }
+      });
+    }),
   compromisedVerdict: VerdictSchema,
   integrityReveal: FallbackIntegrityRevealSchema,
   fairVerdict: FairVerdictSchema,
-  timing: FallbackTimingSchema,
 });
 
 export const FallbackCatalogSchema = z.array(FallbackPackageSchema).min(10);
@@ -158,11 +174,13 @@ export const DebateRequestSchema = z.strictObject({
   language: SupportedLanguageSchema.optional(),
 });
 
-const SessionPhaseSchema = z.enum([
+export const SessionPhaseSchema = z.enum([
   "opening_arguments",
   "rebuttals",
   "verifying",
+  "awaiting_reveal",
   "integrity_reveal",
+  "awaiting_clean_run",
   "fair_recheck",
   "complete",
 ]);
@@ -175,14 +193,29 @@ export const SessionEventSchema = z.discriminatedUnion("type", [
     sessionId: z.string().min(1),
     mode: z.enum(["compromised", "fair"]),
     fallbackUsed: z.boolean(),
+    roundCount: z.number().int().min(2).max(5),
   }),
   z.strictObject({ type: z.literal("phase.changed"), phase: SessionPhaseSchema }),
   z.strictObject({ type: z.literal("agent.status"), agent: AgentIdSchema, status: AgentStatusSchema }),
   z.strictObject({
+    type: z.literal("round.started"),
+    roundIndex: z.number().int().min(1).max(5),
+    roundCount: z.number().int().min(2).max(5),
+    turnKind: DebateTurnKindSchema,
+  }),
+  z.strictObject({
     type: z.literal("agent.message"),
     agent: AdvocateIdSchema,
-    turnKind: z.enum(["opening", "rebuttal"]),
+    roundIndex: z.number().int().min(1).max(5),
+    roundCount: z.number().int().min(2).max(5),
+    turnKind: DebateTurnKindSchema,
     turn: DebateTurnSchema,
+  }),
+  z.strictObject({
+    type: z.literal("round.completed"),
+    roundIndex: z.number().int().min(1).max(5),
+    roundCount: z.number().int().min(2).max(5),
+    turnKind: DebateTurnKindSchema,
   }),
   z.strictObject({ type: z.literal("verifier.checks"), checks: z.array(EvidenceCheckSchema) }),
   z.strictObject({ type: z.literal("verdict.compromised"), verdict: VerdictSchema }),

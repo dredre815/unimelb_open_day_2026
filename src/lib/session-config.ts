@@ -1,6 +1,9 @@
 import { z } from "zod";
 
 export const SESSION_CONFIG_STORAGE_KEY =
+  "unimelb-open-day-2026:session-config:v2" as const;
+
+const LEGACY_SESSION_CONFIG_STORAGE_KEY =
   "unimelb-open-day-2026:session-config:v1" as const;
 
 export const MODEL_IDS = [
@@ -78,17 +81,15 @@ export type AgentModelConfig = z.infer<typeof AgentModelConfigSchema>;
 
 export const SessionConfigSchema = z
   .object({
-    version: z.literal(1),
+    version: z.literal(2),
     apiKey: z.string().trim().max(512),
     runtimeMode: z.enum(RUNTIME_MODES),
     demoMode: z.enum(DEMO_MODES),
     comparatorMode: z.enum(COMPARATOR_MODES),
     freeTextEnabled: z.boolean(),
-    bilingualMode: z.boolean(),
-    autoRevealDelayMs: z.number().int().min(0).max(10_000),
+    debateRoundCount: z.number().int().min(2).max(5),
     debaterTimeoutMs: z.number().int().min(2_000).max(60_000),
     verifierTimeoutMs: z.number().int().min(2_000).max(60_000),
-    totalSessionTimeoutMs: z.number().int().min(5_000).max(120_000),
     maxRetries: z.number().int().min(0).max(1),
     agents: z
       .object({
@@ -111,30 +112,20 @@ export const SessionConfigSchema = z
         });
       }
     }
-
-    if (config.totalSessionTimeoutMs < config.verifierTimeoutMs) {
-      context.addIssue({
-        code: "custom",
-        path: ["totalSessionTimeoutMs"],
-        message: "The total session timeout must cover at least one verifier call.",
-      });
-    }
   });
 
 export type SessionConfig = z.infer<typeof SessionConfigSchema>;
 
 export const DEFAULT_SESSION_CONFIG: Readonly<SessionConfig> = Object.freeze({
-  version: 1,
+  version: 2,
   apiKey: "",
   runtimeMode: "canned",
   demoMode: "compromised",
   comparatorMode: "generic",
   freeTextEnabled: true,
-  bilingualMode: true,
-  autoRevealDelayMs: 2_200,
+  debateRoundCount: 2,
   debaterTimeoutMs: 6_500,
   verifierTimeoutMs: 9_000,
-  totalSessionTimeoutMs: 25_000,
   maxRetries: 1,
   agents: {
     unimelbAdvocate: {
@@ -174,6 +165,7 @@ export interface SafeSessionConfigSummary {
   runtimeMode: RuntimeMode;
   demoMode: DemoMode;
   comparatorMode: ComparatorMode;
+  debateRoundCount: number;
   agents: SessionConfig["agents"];
 }
 
@@ -243,6 +235,7 @@ export function toSafeSessionConfigSummary(
     runtimeMode: config.runtimeMode,
     demoMode: config.demoMode,
     comparatorMode: config.comparatorMode,
+    debateRoundCount: config.debateRoundCount,
     agents: config.agents,
   };
 }
@@ -261,6 +254,12 @@ function resolveSessionStorage(storage?: Storage): Storage | null {
 export function loadSessionConfig(storage?: Storage): SessionConfig | null {
   const target = resolveSessionStorage(storage);
   if (!target) return null;
+
+  try {
+    target.removeItem(LEGACY_SESSION_CONFIG_STORAGE_KEY);
+  } catch {
+    // Loading the current configuration must not depend on legacy cleanup.
+  }
 
   try {
     const serialized = target.getItem(SESSION_CONFIG_STORAGE_KEY);
@@ -296,6 +295,11 @@ export function saveSessionConfig(
 
   try {
     target.setItem(SESSION_CONFIG_STORAGE_KEY, JSON.stringify(validation.config));
+    try {
+      target.removeItem(LEGACY_SESSION_CONFIG_STORAGE_KEY);
+    } catch {
+      // The current configuration is saved even if legacy cleanup is unavailable.
+    }
     return {
       success: true,
       summary: toSafeSessionConfigSummary(validation.config),
@@ -318,12 +322,15 @@ export function clearSessionConfig(storage?: Storage): boolean {
   const target = resolveSessionStorage(storage);
   if (!target) return false;
 
-  try {
-    target.removeItem(SESSION_CONFIG_STORAGE_KEY);
-    return true;
-  } catch {
-    return false;
+  let succeeded = true;
+  for (const key of [SESSION_CONFIG_STORAGE_KEY, LEGACY_SESSION_CONFIG_STORAGE_KEY]) {
+    try {
+      target.removeItem(key);
+    } catch {
+      succeeded = false;
+    }
   }
+  return succeeded;
 }
 
 export function withoutApiKey(config: SessionConfig): SessionConfig {

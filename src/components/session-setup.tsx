@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import {
   AlertTriangleIcon,
   BotIcon,
   CheckCircle2Icon,
+  ChevronDownIcon,
   EyeIcon,
   EyeOffIcon,
   FlaskConicalIcon,
@@ -65,14 +66,14 @@ const AGENT_ROWS: ReadonlyArray<{
   {
     key: "unimelbAdvocate",
     label: "Melbourne Advocate",
-    role: "Opening + rebuttal",
+    role: "One response per round",
     avatar: "M",
     icon: "agent",
   },
   {
     key: "comparatorAdvocate",
     label: "Comparator Advocate",
-    role: "Opening + rebuttal",
+    role: "One response per round",
     avatar: "C",
     icon: "agent",
   },
@@ -86,7 +87,7 @@ const AGENT_ROWS: ReadonlyArray<{
   {
     key: "fairVerifier",
     label: "Clean judge pair",
-    role: "Order-reversed re-check",
+    role: "2 calls · candidate order reversed",
     avatar: "A↔B",
     icon: "pair",
   },
@@ -118,6 +119,13 @@ interface AgentConfigRowProps {
 }
 
 function AgentConfigRow({ index, row, value, onChange }: AgentConfigRowProps) {
+  const modelDescription = MODEL_OPTIONS.find((option) => option.id === value.model)?.description;
+  const reasoningDescription = REASONING_OPTIONS.find(
+    (option) => option.id === value.reasoningEffort,
+  )?.description;
+  const modelDescriptionId = `${row.key}-model-description`;
+  const reasoningDescriptionId = `${row.key}-reasoning-description`;
+
   return (
     <div className="grid min-h-16 grid-cols-[2.1rem_2fr_1.45fr_1.65fr_1.35fr] items-center gap-3 border-t border-border/80 px-4 py-2 first:border-t-0 max-[900px]:grid-cols-[2rem_1.4fr_1fr_1fr]">
       <span className="text-center text-base font-bold text-cyan-300">{index + 1}</span>
@@ -142,13 +150,17 @@ function AgentConfigRow({ index, row, value, onChange }: AgentConfigRowProps) {
         </div>
       </div>
       <p className="text-sm text-muted-foreground max-[900px]:hidden">{row.role}</p>
-      <label className="min-w-0">
+      <label className="flex min-w-0 flex-col gap-1">
         <span className="sr-only">Model for {row.label}</span>
         <Select
           value={value.model}
           onValueChange={(model) => onChange({ ...value, model: model as ModelId })}
         >
-          <SelectTrigger className="w-full" aria-label={`Model for ${row.label}`}>
+          <SelectTrigger
+            className="w-full"
+            aria-label={`Model for ${row.label}`}
+            aria-describedby={modelDescriptionId}
+          >
             <SelectValue />
           </SelectTrigger>
           <SelectContent position="popper">
@@ -161,8 +173,11 @@ function AgentConfigRow({ index, row, value, onChange }: AgentConfigRowProps) {
             </SelectGroup>
           </SelectContent>
         </Select>
+        <span id={modelDescriptionId} className="text-xs leading-snug text-muted-foreground">
+          {modelDescription}
+        </span>
       </label>
-      <label className="min-w-0">
+      <label className="flex min-w-0 flex-col gap-1">
         <span className="sr-only">Reasoning effort for {row.label}</span>
         <Select
           value={value.reasoningEffort}
@@ -170,7 +185,11 @@ function AgentConfigRow({ index, row, value, onChange }: AgentConfigRowProps) {
             onChange({ ...value, reasoningEffort: reasoningEffort as ReasoningEffort })
           }
         >
-          <SelectTrigger className="w-full" aria-label={`Reasoning effort for ${row.label}`}>
+          <SelectTrigger
+            className="w-full"
+            aria-label={`Reasoning effort for ${row.label}`}
+            aria-describedby={reasoningDescriptionId}
+          >
             <SelectValue />
           </SelectTrigger>
           <SelectContent position="popper">
@@ -183,6 +202,9 @@ function AgentConfigRow({ index, row, value, onChange }: AgentConfigRowProps) {
             </SelectGroup>
           </SelectContent>
         </Select>
+        <span id={reasoningDescriptionId} className="text-xs leading-snug text-muted-foreground">
+          {reasoningDescription}
+        </span>
       </label>
     </div>
   );
@@ -190,6 +212,7 @@ function AgentConfigRow({ index, row, value, onChange }: AgentConfigRowProps) {
 
 interface SegmentedSettingProps<T extends string> {
   label: string;
+  description?: string;
   value: T;
   options: ReadonlyArray<{ value: T; label: string }>;
   onChange: (value: T) => void;
@@ -197,10 +220,13 @@ interface SegmentedSettingProps<T extends string> {
 
 function SegmentedSetting<T extends string>({
   label,
+  description,
   value,
   options,
   onChange,
 }: SegmentedSettingProps<T>) {
+  const descriptionId = useId();
+
   return (
     <div className="flex min-w-0 flex-col gap-2">
       <span className="text-sm font-medium leading-snug text-muted-foreground">{label}</span>
@@ -214,17 +240,23 @@ function SegmentedSetting<T extends string>({
         spacing={0}
         className="w-full"
         aria-label={label}
+        aria-describedby={description ? descriptionId : undefined}
       >
         {options.map((option) => (
           <ToggleGroupItem
             key={option.value}
             value={option.value}
-            className="h-11 min-w-0 flex-1 px-2 text-sm data-[state=on]:border-primary data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+            className="h-auto min-h-11 min-w-0 flex-1 whitespace-normal px-2 py-2 text-center text-sm leading-tight data-[state=on]:border-primary data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
           >
             {option.label}
           </ToggleGroupItem>
         ))}
       </ToggleGroup>
+      {description ? (
+        <span id={descriptionId} className="text-xs leading-snug text-muted-foreground">
+          {description}
+        </span>
+      ) : null}
     </div>
   );
 }
@@ -264,6 +296,10 @@ export function SessionSetup({
 
   const hasStoredKey = storedApiKey.length > 0;
   const activeKey = apiKeyDraft || storedApiKey;
+  const hasClearableKey = activeKey.trim().length > 0 || config.apiKey.trim().length > 0;
+  const advocateCallCount = config.debateRoundCount * 2;
+  const verifierCallCount = config.demoMode === "compromised" ? 3 : 2;
+  const liveCallCount = advocateCallCount + verifierCallCount;
   const keyValidation = useMemo(() => validateApiKey(activeKey), [activeKey]);
   const liveReady =
     config.runtimeMode === "canned" || (keyValidation.valid && riskAcknowledged);
@@ -338,10 +374,10 @@ export function SessionSetup({
             <span className="font-display text-xl font-bold tracking-tight">
               TRUST THE <span className="text-blue-400">VERDICT?</span>
             </span>
-            <DialogTitle className="text-2xl">Session setup</DialogTitle>
+            <DialogTitle className="text-2xl">Operator setup</DialogTitle>
           </div>
           <DialogDescription className="sr-only">
-            Configure the temporary browser API session, agent models, reasoning effort, and kiosk behaviour.
+            Configure the demo experience, temporary browser API session, agent models, and reasoning effort.
           </DialogDescription>
         </DialogHeader>
 
@@ -352,7 +388,9 @@ export function SessionSetup({
                 <h2 id="api-session-heading" className="text-xl font-semibold">
                   OpenAI API session
                 </h2>
-                <p className="mt-1 text-sm text-muted-foreground">Required only for Live AI mode.</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Optional. Prepared demo mode does not need a key.
+                </p>
               </div>
               <label className="min-w-0">
                 <span className="mb-1.5 block text-sm font-medium text-muted-foreground">
@@ -407,7 +445,12 @@ export function SessionSetup({
                 <FlaskConicalIcon data-icon="inline-start" />
                 {testing ? "Testing…" : "Test connection"}
               </Button>
-              <Button type="button" variant="destructive" onClick={handleClearKey}>
+              <Button
+                type="button"
+                variant="destructive"
+                disabled={!hasClearableKey}
+                onClick={handleClearKey}
+              >
                 <Trash2Icon data-icon="inline-start" />
                 Clear key
               </Button>
@@ -427,7 +470,9 @@ export function SessionSetup({
                 </>
               ) : (
                 <span className="text-muted-foreground">
-                  {config.apiKey ? keyValidation.message : "No key configured. Canned mode remains fully available."}
+                  {activeKey
+                    ? keyValidation.message
+                    : "No key configured. Prepared demo mode remains fully available."}
                 </span>
               )}
             </div>
@@ -451,73 +496,123 @@ export function SessionSetup({
             </Alert>
           </section>
 
-          <section className="glass-panel shrink-0 overflow-hidden rounded-xl" aria-labelledby="agent-config-heading">
-            <div className="grid grid-cols-[2.1rem_2fr_1.45fr_1.65fr_1.35fr] gap-3 bg-secondary/60 px-4 py-2 text-sm text-muted-foreground max-[900px]:grid-cols-[2rem_1.4fr_1fr_1fr]">
-              <span>#</span>
-              <h2 id="agent-config-heading" className="font-medium">Agent</h2>
-              <span className="max-[900px]:hidden">Role</span>
-              <span>Model</span>
-              <span>Reasoning effort</span>
+          <section className="glass-panel shrink-0 rounded-xl p-4" aria-labelledby="experience-heading">
+            <div className="mb-4">
+              <h2 id="experience-heading" className="text-xl font-semibold">Demo experience</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Choose the visitor flow first. The prepared demo is the dependable event default.
+              </p>
             </div>
-            {AGENT_ROWS.map((row, index) => (
-              <AgentConfigRow
-                key={row.key}
-                index={index}
-                row={row}
-                value={config.agents[row.key]}
-                onChange={(value) => updateAgent(row.key, value)}
+            <div className="grid grid-cols-3 gap-4 max-[900px]:grid-cols-2 max-[620px]:grid-cols-1">
+              <SegmentedSetting<RuntimeMode>
+                label="Generation"
+                description="Prepared demo is recommended and makes no API calls."
+                value={config.runtimeMode}
+                options={[
+                  { value: "canned", label: "Prepared demo (recommended)" },
+                  { value: "live", label: "Live AI" },
+                ]}
+                onChange={(runtimeMode) => setConfig((previous) => ({ ...previous, runtimeMode }))}
               />
-            ))}
+              <SegmentedSetting<DemoMode>
+                label="Demo story"
+                description="Compromised reveal shows the hidden-policy lesson; fair only skips it."
+                value={config.demoMode}
+                options={[
+                  { value: "compromised", label: "Compromised reveal" },
+                  { value: "fair", label: "Fair only" },
+                ]}
+                onChange={(demoMode) => setConfig((previous) => ({ ...previous, demoMode }))}
+              />
+              <SegmentedSetting<ComparatorMode>
+                label="Comparator"
+                description="Use a named comparator only after approval; generic is the safe default."
+                value={config.comparatorMode}
+                options={[
+                  { value: "generic", label: "Generic" },
+                  { value: "named", label: "Named" },
+                ]}
+                onChange={(comparatorMode) => setConfig((previous) => ({ ...previous, comparatorMode }))}
+              />
+              <SegmentedSetting<"free" | "chips">
+                label="Visitor input"
+                description="Question chips are safest during queues and for younger visitors."
+                value={config.freeTextEnabled ? "free" : "chips"}
+                options={[
+                  { value: "chips", label: "Question chips" },
+                  { value: "free", label: "Free text" },
+                ]}
+                onChange={(value) => setConfig((previous) => ({ ...previous, freeTextEnabled: value === "free" }))}
+              />
+              <div className="flex min-w-0 flex-col gap-2">
+                <span className="text-sm font-medium leading-snug text-muted-foreground">Debate rounds</span>
+                <ToggleGroup
+                  type="single"
+                  value={String(config.debateRoundCount)}
+                  onValueChange={(value) => {
+                    if (value) {
+                      setConfig((previous) => ({ ...previous, debateRoundCount: Number(value) }));
+                    }
+                  }}
+                  variant="outline"
+                  spacing={0}
+                  className="w-full"
+                  aria-label="Debate rounds"
+                  aria-describedby="debate-rounds-description"
+                >
+                  {[2, 3, 4, 5].map((roundCount) => (
+                    <ToggleGroupItem
+                      key={roundCount}
+                      value={String(roundCount)}
+                      className="h-11 min-w-11 flex-1 data-[state=on]:border-primary data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+                    >
+                      {roundCount}
+                    </ToggleGroupItem>
+                  ))}
+                </ToggleGroup>
+                <span id="debate-rounds-description" className="text-xs leading-snug text-muted-foreground">
+                  A live run makes {liveCallCount} model calls before retries: {advocateCallCount} advocate
+                  calls and {verifierCallCount} verifier calls. More rounds increase duration and API cost.
+                </span>
+              </div>
+            </div>
           </section>
 
-          <section className="glass-panel grid shrink-0 grid-cols-5 gap-4 rounded-xl p-4 max-[1100px]:grid-cols-3 max-[760px]:grid-cols-2" aria-label="Kiosk behaviour">
-            <SegmentedSetting<RuntimeMode>
-              label="Generation"
-              value={config.runtimeMode}
-              options={[{ value: "live", label: "Live AI" }, { value: "canned", label: "Canned only" }]}
-              onChange={(runtimeMode) => setConfig((previous) => ({ ...previous, runtimeMode }))}
-            />
-            <SegmentedSetting<DemoMode>
-              label="Integrity narrative"
-              value={config.demoMode}
-              options={[{ value: "compromised", label: "Compromised" }, { value: "fair", label: "Fair only" }]}
-              onChange={(demoMode) => setConfig((previous) => ({ ...previous, demoMode }))}
-            />
-            <SegmentedSetting<ComparatorMode>
-              label="Comparator (named requires approval)"
-              value={config.comparatorMode}
-              options={[{ value: "named", label: "Named" }, { value: "generic", label: "Generic" }]}
-              onChange={(comparatorMode) => setConfig((previous) => ({ ...previous, comparatorMode }))}
-            />
-            <SegmentedSetting<"free" | "chips">
-              label="Visitor input"
-              value={config.freeTextEnabled ? "free" : "chips"}
-              options={[{ value: "free", label: "Free text" }, { value: "chips", label: "Chips only" }]}
-              onChange={(value) => setConfig((previous) => ({ ...previous, freeTextEnabled: value === "free" }))}
-            />
-            <SegmentedSetting<"bilingual" | "english">
-              label="Language"
-              value={config.bilingualMode ? "bilingual" : "english"}
-              options={[{ value: "bilingual", label: "Bilingual" }, { value: "english", label: "English only" }]}
-              onChange={(value) => setConfig((previous) => ({ ...previous, bilingualMode: value === "bilingual" }))}
-            />
-            <label className="flex min-w-0 flex-col gap-2">
-              <span className="text-sm font-medium text-muted-foreground">Auto reveal delay</span>
-              <Select
-                value={String(config.autoRevealDelayMs)}
-                onValueChange={(value) => setConfig((previous) => ({ ...previous, autoRevealDelayMs: Number(value) }))}
-              >
-                <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
-                <SelectContent position="popper">
-                  <SelectGroup>
-                    <SelectItem value="800">Fast · 0.8 s</SelectItem>
-                    <SelectItem value="2200">Normal · 2.2 s</SelectItem>
-                    <SelectItem value="4500">Facilitated · 4.5 s</SelectItem>
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
-            </label>
-          </section>
+          <details className="group glass-panel shrink-0 overflow-hidden rounded-xl">
+            <summary className="flex min-h-16 cursor-pointer list-none items-center justify-between gap-6 px-4 py-3 outline-none focus-visible:ring-3 focus-visible:ring-inset focus-visible:ring-ring/60 [&::-webkit-details-marker]:hidden">
+              <span>
+                <span id="agent-config-heading" className="block text-xl font-semibold">Advanced agent models</span>
+                <span className="mt-1 block text-sm text-muted-foreground">
+                  Optional. The defaults balance event speed and verification quality.
+                </span>
+              </span>
+              <span className="flex shrink-0 items-center gap-2 text-sm font-medium text-cyan-100">
+                Configure models &amp; thinking
+                <ChevronDownIcon className="transition-transform group-open:rotate-180" aria-hidden="true" />
+              </span>
+            </summary>
+            <div aria-labelledby="agent-config-heading" className="border-t border-border/80">
+              <p className="px-4 py-3 text-sm text-muted-foreground">
+                Higher-capability models and reasoning can add latency and live API cost. The clean judge runs twice with candidate order reversed.
+              </p>
+              <div className="grid grid-cols-[2.1rem_2fr_1.45fr_1.65fr_1.35fr] gap-3 bg-secondary/60 px-4 py-2 text-sm text-muted-foreground max-[900px]:grid-cols-[2rem_1.4fr_1fr_1fr]">
+                <span>#</span>
+                <span>Agent</span>
+                <span className="max-[900px]:hidden">Role</span>
+                <span>Model</span>
+                <span>Thinking</span>
+              </div>
+              {AGENT_ROWS.map((row, index) => (
+                <AgentConfigRow
+                  key={row.key}
+                  index={index}
+                  row={row}
+                  value={config.agents[row.key]}
+                  onChange={(value) => updateAgent(row.key, value)}
+                />
+              ))}
+            </div>
+          </details>
         </div>
 
         <div className="flex items-center justify-between gap-4 border-t border-border/80 bg-background/90 px-6 py-3">
@@ -538,14 +633,14 @@ export function SessionSetup({
               <span className="text-red-200">{saveError}</span>
             ) : (
               <span>
-                {config.runtimeMode === "live" ? `${maskApiKey(config.apiKey)} · ` : ""}
+                {config.runtimeMode === "live" ? `${maskApiKey(activeKey)} · ` : ""}
                 Saved only for this browser tab · Nothing written to the repository
               </span>
             )}
           </div>
           <Button type="button" size="lg" disabled={!liveReady} onClick={handleSave}>
             <BotIcon data-icon="inline-start" />
-            Save session & enter kiosk
+            Save & enter kiosk
           </Button>
         </div>
       </DialogContent>

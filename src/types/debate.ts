@@ -33,6 +33,7 @@ export type AdvocateId = "unimelb" | "competitor";
 export type AgentId = AdvocateId | "verifier";
 export type Winner = AdvocateId | "tie" | "depends";
 export type DemoMode = "compromised" | "fair";
+export type DebateTurnKind = "opening" | "rebuttal";
 
 export interface EvidenceFact {
   id: string;
@@ -66,6 +67,12 @@ export interface DebateTurn {
   message: string;
   stanceSummary: string;
   claims: DebateClaim[];
+}
+
+export interface DebateRound {
+  roundIndex: number;
+  turnKind: DebateTurnKind;
+  turns: Record<AdvocateId, DebateTurn>;
 }
 
 export interface EvidenceCheck {
@@ -144,14 +151,6 @@ export interface RetrievedEvidence {
   competitorId: string;
 }
 
-export interface FallbackTiming {
-  openingDelayMs: number;
-  rebuttalDelayMs: number;
-  verdictDelayMs: number;
-  revealDelayMs: number;
-  fairVerdictDelayMs: number;
-}
-
 export interface FallbackIntegrityReveal {
   passed: false;
   publicLabel: "Policy integrity: FAILED";
@@ -164,29 +163,54 @@ export interface FallbackPackage {
   language: SupportedLanguage;
   category: FallbackCategory;
   sampleQuestion: string;
-  openings: Record<AdvocateId, DebateTurn>;
-  rebuttals: Record<AdvocateId, DebateTurn>;
+  rounds: DebateRound[];
   compromisedVerdict: Verdict;
   integrityReveal: FallbackIntegrityReveal;
   fairVerdict: FairVerdict;
-  timing: FallbackTiming;
 }
 
 export type SessionPhase =
   | "opening_arguments"
   | "rebuttals"
   | "verifying"
+  | "awaiting_reveal"
   | "integrity_reveal"
+  | "awaiting_clean_run"
   | "fair_recheck"
   | "complete";
 
 export type AgentStatus = "idle" | "thinking" | "speaking" | "checking" | "complete" | "error";
 
 export type SessionEvent =
-  | { type: "session.started"; sessionId: string; mode: DemoMode; fallbackUsed: boolean }
+  | {
+      type: "session.started";
+      sessionId: string;
+      mode: DemoMode;
+      fallbackUsed: boolean;
+      roundCount: number;
+    }
   | { type: "phase.changed"; phase: SessionPhase }
   | { type: "agent.status"; agent: AgentId; status: AgentStatus }
-  | { type: "agent.message"; agent: AdvocateId; turnKind: "opening" | "rebuttal"; turn: DebateTurn }
+  | {
+      type: "round.started";
+      roundIndex: number;
+      roundCount: number;
+      turnKind: DebateTurnKind;
+    }
+  | {
+      type: "agent.message";
+      agent: AdvocateId;
+      roundIndex: number;
+      roundCount: number;
+      turnKind: DebateTurnKind;
+      turn: DebateTurn;
+    }
+  | {
+      type: "round.completed";
+      roundIndex: number;
+      roundCount: number;
+      turnKind: DebateTurnKind;
+    }
   | { type: "verifier.checks"; checks: EvidenceCheck[] }
   | { type: "verdict.compromised"; verdict: Verdict }
   | { type: "integrity.result"; context: "active" | "fair"; result: IntegrityResult }

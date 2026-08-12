@@ -14,7 +14,7 @@ Confirm the implementation against this inventory. Any new data item or destinat
 
 | Data | Source | Purpose | Location/destination | Intended lifetime | Persisted by app? |
 | --- | --- | --- | --- | --- | --- |
-| Temporary API key | Operator | Authorise live API calls | Volatile memory and `sessionStorage` namespace `unimelb-open-day-2026:session-config:v1`; OpenAI request header | Current attended tab/event only | Session-scoped exception |
+| Temporary API key | Operator | Authorise live API calls | Volatile memory and `sessionStorage` namespace `unimelb-open-day-2026:session-config:v2`; OpenAI request header | Current attended tab/event only | Session-scoped exception |
 | Model/reasoning/runtime switches | Operator | Configure the demo | `sessionStorage` | Current tab session | Session-scoped |
 | Visitor question | Visitor or fixed chip | Debate topic | Volatile UI state; OpenAI in live mode | Until reset/session completion and provider handling | No persistent app storage |
 | Debate transcript/model output | OpenAI or canned package | Visitor experience | Volatile UI state | Until reset/inactivity timeout | No |
@@ -50,7 +50,7 @@ Required visible disclosure:
 
 - [ ] The disclosure is visible before typing or selecting a question.
 - [ ] It remains readable at 1366×768 and 1920×1080.
-- [ ] It is available in approved Chinese when bilingual mode is enabled.
+- [ ] The event UI is English-only; no language selector or partial translation is presented to visitors.
 - [ ] Supporting privacy copy explains that accepted live questions are processed by OpenAI directly from the browser.
 - [ ] Copy does not claim that `sessionStorage` is secure or that OpenAI retains nothing.
 - [ ] Copy does not claim Zero Data Retention unless the actual event project and use have been formally confirmed.

@@ -22,14 +22,14 @@ For Open Day, use only a dedicated, restricted, event-specific key. Create it sh
 
 1. Locally validates a visitor question and blocks common personal-information, unsafe-content, off-topic, and prompt-injection patterns.
 2. Selects curated evidence for the University of Melbourne and the configured comparator.
-3. Runs both advocate openings in parallel, then both rebuttals in parallel.
-4. Runs a compromised verifier and deterministically keeps the controlled demo outcome consistent.
-5. Reveals the prompt mismatch and the intentionally public compromised policy line.
-6. Re-checks the unchanged transcript with clean, anonymised, order-reversed verifier calls.
+3. Runs 2–5 debate rounds, with both advocates generated in parallel within each round and each message revealed at least two seconds apart.
+4. Holds a visible Judge deliberation for at least three seconds, then returns the controlled first verdict.
+5. Waits for the visitor to challenge the result before revealing the prompt mismatch and public compromised policy line.
+6. Waits for the visitor to start a clean re-check of the unchanged transcript with anonymised, order-reversed verifier calls.
 7. Shows consensus, or `depends` when the clean judges disagree.
 8. Clears visitor content on reset or inactivity.
 
-When no API key is configured, the same narrative is available through canned fallback packages.
+When no API key is configured, the same narrative is available through prepared fallback packages.
 
 ## Architecture
 
@@ -39,12 +39,12 @@ flowchart LR
     B --> S["sessionStorage<br/>temporary runtime configuration"]
     B --> L["Client orchestrator<br/>safety, evidence, prompts, fallbacks"]
     L --> O["OpenAI Responses API<br/>direct HTTPS from browser"]
-    L --> C["Canned fallback packages"]
+    L --> C["Prepared fallback packages"]
 ```
 
 There is no application server in the deployed topology. GitHub Pages serves the compiled files, while live API requests go directly from the booth browser to OpenAI. The deployment workflow never receives an API key and no key is compiled into the site.
 
-Runtime configuration is stored under the versioned `sessionStorage` namespace `unimelb-open-day-2026:session-config:v1`. It must never be moved to `localStorage`, cookies, source code, build-time environment variables, URLs, analytics, or logs.
+Runtime configuration is stored under the versioned `sessionStorage` namespace `unimelb-open-day-2026:session-config:v2`. Loading, saving, or clearing v2 configuration removes the obsolete v1 value. Configuration must never be moved to `localStorage`, cookies, source code, build-time environment variables, URLs, analytics, or logs.
 
 Because the prompts, evidence packs, policy hash, and enforcement logic are shipped to the browser, the Integrity X-Ray is a teaching aid rather than remote attestation or a security boundary.
 
@@ -55,7 +55,7 @@ Because the prompts, evidence packs, policy hash, and enforcement logic are ship
 - A Chromium-based browser for kiosk testing, installed for Playwright with `pnpm exec playwright install chromium`.
 - An OpenAI API key only when exercising live mode.
 
-Do not create or configure an API key merely to install, test, build, deploy, or use canned mode.
+Do not create or configure an API key merely to install, test, build, deploy, or use Prepared demo mode.
 
 ## Local development
 
@@ -72,7 +72,7 @@ Start the development server:
 pnpm dev
 ```
 
-Open the local URL printed by the command. Use **Setup** if live mode is required; otherwise leave the key empty and use canned mode.
+Open the local URL printed by the command. Use **Operator setup** if live mode is required; otherwise leave the key empty and use **Prepared demo**.
 
 Run the primary checks:
 
@@ -99,23 +99,25 @@ pnpm smoke-test
 
 ## Operator setup
 
-Open **Setup** before visitors arrive. The setup panel is deliberately explicit about the client-side key risk.
+Open **Operator setup** before visitors arrive. The setup panel is deliberately explicit about the client-side key risk.
 
-1. Choose **Canned** first and complete a rehearsal without a key.
+1. Choose **Prepared demo (recommended)** first and complete a rehearsal without a key.
 2. If live mode is approved, paste the dedicated event key into the masked field.
 3. Read and accept the client-side key warning. Live mode cannot be saved without this acknowledgement.
-4. Configure each role:
+4. Choose the demo story, comparator, visitor input, and **Debate rounds** from 2–5. The default is 2 rounds, with one response per advocate in each round.
+5. Configure each role under **Advanced agent models**:
    - University of Melbourne Advocate;
    - Comparator Advocate;
    - Compromised Verifier;
    - Clean Verifier pair.
-5. Select a model and reasoning effort for each role. The supported setup choices are `gpt-5.6-luna`, `gpt-5.6-terra`, and `gpt-5.6-sol`, with `none`, `low`, `medium`, `high`, `xhigh`, or `max` reasoning where supported by the selected model.
-6. Set runtime switches: live/canned, compromised/fair, named/generic comparator, free-text/chips-only, and bilingual/English-only.
-7. Save for this tab session, then run one sample-chip question.
+6. Select a model and reasoning effort for each role. The supported setup choices are `gpt-5.6-luna`, `gpt-5.6-terra`, and `gpt-5.6-sol`, with `none`, `low`, `medium`, `high`, `xhigh`, or `max` reasoning where supported by the selected model.
+7. Save for this tab session, then run one sample-chip question through **Really? Inspect the judge** and **Run a clean re-check**.
+
+The visitor UI is English-only for this event. Debate pacing is intentionally not configurable: every advocate message is separated by at least two seconds, and the first verdict appears only after at least three seconds of visible Judge deliberation. A live compromised flow makes `2 × rounds + 3` model calls before retries; Fair only makes `2 × rounds + 2`. More rounds increase duration and API cost.
 
 The default advocates use Luna with `none` reasoning. The compromised verifier and clean verifier use Terra with `low` reasoning. Reasoning effort controls model computation; the application never requests or displays chain-of-thought.
 
-Selecting **Clear key** removes the runtime key immediately and returns the demo to canned mode. Refreshing the page is not a secure erasure method because `sessionStorage` normally survives a reload.
+Selecting **Clear key** removes the runtime key immediately and returns the demo to Prepared demo mode. Refreshing the page is not a secure erasure method because `sessionStorage` normally survives a reload.
 
 ## Deploy to GitHub Pages
 
@@ -137,11 +139,11 @@ On the school laptop:
 
 1. Use a dedicated, clean browser profile with unnecessary extensions disabled.
 2. Open the final GitHub Pages URL while the network is stable.
-3. Open **Setup**, rehearse canned mode, then configure the temporary live key if approved.
-4. Run one complete live flow and confirm compromised verdict → X-Ray → clean re-check → final takeaway.
+3. Open **Operator setup**, rehearse Prepared demo mode, then configure the temporary live key if approved.
+4. Run one complete live flow and confirm debate → Judge deliberation → first verdict → visitor challenge → X-Ray → visitor-triggered clean re-check → final takeaway.
 5. Verify reset removes the previous visitor question and output.
 6. Enable chips-only mode for younger visitors or queues when required.
-7. Enter browser full-screen mode, keep the laptop attended, disable sleep and notifications, and retain quick access to Setup.
+7. Enter browser full-screen mode, keep the laptop attended, disable sleep and notifications, and retain quick access to Operator setup.
 
 At shutdown, select **Clear key**, close all demo tabs, revoke the key in the OpenAI project, review event usage, and disable the Pages deployment if it is no longer needed. Follow the runbook rather than relying on closing the browser alone.
 

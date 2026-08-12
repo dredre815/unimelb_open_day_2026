@@ -5,27 +5,16 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import type { SessionConfig } from "@/lib/session-config";
-import type { SupportedLanguage } from "@/types/debate";
 import { cn } from "@/lib/utils";
 
-export const SAMPLE_QUESTIONS: Record<SupportedLanguage, readonly string[]> = {
-  en: [
-    "Which university is better for IT and computer science?",
-    "Which campus is more beautiful?",
-    "Which university offers more flexibility?",
-    "Which is better for student life?",
-    "Which is better for someone interested in cybersecurity?",
-    "Which university should I choose if I am still undecided?",
-  ],
-  zh: [
-    "哪所大学更适合学习信息技术和计算机科学？",
-    "哪所大学的校园更美？",
-    "哪所大学的课程选择更灵活？",
-    "哪所大学的学生生活更丰富？",
-    "对网络安全感兴趣的人更适合哪所大学？",
-    "如果我还没决定方向，应该选择哪所大学？",
-  ],
-};
+export const SAMPLE_QUESTIONS = [
+  "Which university is better for IT and computer science?",
+  "Which campus is more beautiful?",
+  "Which university offers more flexibility?",
+  "Which is better for student life?",
+  "Which is better for someone interested in cybersecurity?",
+  "Which university should I choose if I am still undecided?",
+] as const;
 
 interface AttractAgentProps {
   label: string;
@@ -86,10 +75,8 @@ function AgentNetwork() {
 
 export interface AttractScreenProps {
   config: SessionConfig;
-  language: SupportedLanguage;
   question: string;
   error: string | null;
-  onLanguageChange: (language: SupportedLanguage) => void;
   onQuestionChange: (question: string) => void;
   onStart: (question: string) => void;
   onOpenSetup: () => void;
@@ -97,54 +84,24 @@ export interface AttractScreenProps {
 
 export function AttractScreen({
   config,
-  language,
   question,
   error,
-  onLanguageChange,
   onQuestionChange,
   onStart,
   onOpenSetup,
 }: AttractScreenProps) {
-  const questions = SAMPLE_QUESTIONS[language];
-
   return (
     <main className="kiosk-grid flex min-h-dvh flex-col overflow-hidden px-[clamp(1rem,2vw,2.4rem)] pb-4" data-testid="attract-screen">
       <header className="flex h-16 shrink-0 items-center justify-between border-b border-border/50">
         <p className="text-base font-semibold tracking-tight sm:text-lg">University of Melbourne</p>
         <div className="flex items-center gap-3">
-          {config.bilingualMode ? (
-            <div className="flex h-11 items-center rounded-lg border border-border bg-background/60 p-1" aria-label="Question language">
-              <button
-                type="button"
-                onClick={() => onLanguageChange("en")}
-                className={cn(
-                  "h-9 min-w-12 rounded-md px-3 text-sm font-semibold outline-none focus-visible:ring-3 focus-visible:ring-ring/60",
-                  language === "en" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground",
-                )}
-                aria-pressed={language === "en"}
-              >
-                EN
-              </button>
-              <button
-                type="button"
-                onClick={() => onLanguageChange("zh")}
-                className={cn(
-                  "h-9 min-w-12 rounded-md px-3 text-sm font-semibold outline-none focus-visible:ring-3 focus-visible:ring-ring/60",
-                  language === "zh" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground",
-                )}
-                aria-pressed={language === "zh"}
-              >
-                中文
-              </button>
-            </div>
-          ) : null}
           <Button variant="outline" onClick={onOpenSetup}>
             <SettingsIcon data-icon="inline-start" />
-            Setup
+            Operator setup
           </Button>
           <Badge variant="outline" className="h-11 gap-2 border-cyan-400/35 px-4 text-sm text-cyan-100">
             <span className="size-2 rounded-full bg-cyan-300 shadow-[0_0_12px_rgb(86_216_255/0.9)]" />
-            {config.runtimeMode === "live" ? "Live ready" : "Canned ready"}
+            {config.runtimeMode === "live" ? "Live AI" : "Prepared demo"}
           </Badge>
         </div>
       </header>
@@ -157,22 +114,35 @@ export function AttractScreen({
           <p className="mt-[clamp(0.45rem,1.2vh,1rem)] text-[clamp(1.15rem,2vw,2.25rem)] tracking-[0.01em] text-slate-200">
             Three AIs. One hidden instruction.
           </p>
+          <p className="mt-2 text-[clamp(0.95rem,1.15vw,1.25rem)] text-cyan-100">
+            Choose a question. Two AIs debate; a third AI judges.
+          </p>
         </div>
 
         <AgentNetwork />
 
-        <div className="grid w-full grid-cols-6 gap-2.5 max-[1050px]:grid-cols-3" aria-label="Sample questions">
-          {questions.map((sample) => (
-            <button
-              type="button"
-              key={sample}
-              className="min-h-[4.7rem] rounded-xl border border-blue-400/55 bg-card/75 px-3 py-2 text-[clamp(0.78rem,0.92vw,1rem)] font-medium leading-snug text-slate-100 shadow-[inset_0_1px_rgb(255_255_255/0.04)] outline-none transition hover:border-cyan-300 hover:bg-accent focus-visible:ring-3 focus-visible:ring-ring/60"
-              onClick={() => onQuestionChange(sample)}
-            >
-              {sample}
-            </button>
-          ))}
-        </div>
+        <fieldset className="grid w-full grid-cols-6 gap-2.5 max-[1050px]:grid-cols-3">
+          <legend className="sr-only">Choose a question</legend>
+          {SAMPLE_QUESTIONS.map((sample) => {
+            const selected = question.trim() === sample;
+            return (
+              <button
+                type="button"
+                key={sample}
+                className={cn(
+                  "min-h-[4.7rem] rounded-xl border px-3 py-2 text-[clamp(0.78rem,0.92vw,1rem)] font-medium leading-snug text-slate-100 shadow-[inset_0_1px_rgb(255_255_255/0.04)] outline-none transition hover:border-cyan-300 hover:bg-accent focus-visible:ring-3 focus-visible:ring-ring/60",
+                  selected
+                    ? "border-cyan-300 bg-primary/30 ring-2 ring-cyan-300/45"
+                    : "border-blue-400/55 bg-card/75",
+                )}
+                onClick={() => onQuestionChange(sample)}
+                aria-pressed={selected}
+              >
+                {sample}
+              </button>
+            );
+          })}
+        </fieldset>
 
         <form
           className="grid w-full max-w-[90rem] grid-cols-[minmax(0,1fr)_minmax(15rem,24rem)] gap-3 max-[760px]:grid-cols-1"
@@ -191,14 +161,11 @@ export function AttractScreen({
               disabled={!config.freeTextEnabled}
               placeholder={
                 config.freeTextEnabled
-                  ? language === "zh"
-                    ? "输入一个大学比较问题…"
-                    : "Ask a university comparison question…"
-                  : language === "zh"
-                    ? "请选择上方的示例问题"
-                    : "Choose a sample question above"
+                  ? "Ask a university comparison question…"
+                  : "Choose a sample question above"
               }
               onChange={(event) => onQuestionChange(event.target.value)}
+              aria-invalid={Boolean(error)}
               aria-describedby="privacy-disclosure question-error"
             />
             <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm tabular-nums text-muted-foreground">
@@ -206,7 +173,7 @@ export function AttractScreen({
             </span>
           </label>
           <Button type="submit" size="lg" className="h-[clamp(3.5rem,7vh,5.7rem)] rounded-xl text-[clamp(1.15rem,1.5vw,1.75rem)]" disabled={!question.trim()}>
-            {language === "zh" ? "开始辩论" : "Start Debate"}
+            Start Debate
             <ArrowRightIcon data-icon="inline-end" />
           </Button>
         </form>
@@ -216,26 +183,13 @@ export function AttractScreen({
             {error ?? ""}
           </p>
           <p id="privacy-disclosure" className="text-[clamp(0.75rem,0.85vw,0.95rem)] leading-snug text-muted-foreground">
-            {language === "zh" ? (
-              <>
-                教育用途的人工智能演示。请勿输入个人信息。本应用不会保存问题。人工智能回答可能有误。自由文本仅适用于 13 岁及以上访客。
-                <span className="mt-0.5 block text-slate-300">
-                  {config.runtimeMode === "live"
-                    ? "实时 AI 模式下，获准的问题、所选证据和提示词会由此浏览器直接发送至 OpenAI。"
-                    : "当前离线演示模式不会调用 OpenAI。"}
-                </span>
-              </>
-            ) : (
-              <>
-                Educational AI demo. Please do not enter personal information. Questions are not saved by this app.
-                AI responses may be wrong. Free text is for visitors aged 13+.
-                <span className="mt-0.5 block text-slate-300">
-                  {config.runtimeMode === "live"
-                    ? "In Live AI mode, accepted questions, selected evidence and prompts are sent directly from this browser to OpenAI."
-                    : "Canned mode does not call OpenAI."}
-                </span>
-              </>
-            )}
+            Educational AI demo. Please do not enter personal information. Questions are not saved by this app.
+            AI responses may be wrong. Free text is for visitors aged 13+.
+            <span className="mt-0.5 block text-slate-300">
+              {config.runtimeMode === "live"
+                ? "In Live AI mode, accepted questions, selected evidence and prompts are sent directly from this browser to OpenAI."
+                : "Prepared demo mode does not call OpenAI."}
+            </span>
           </p>
         </div>
       </section>

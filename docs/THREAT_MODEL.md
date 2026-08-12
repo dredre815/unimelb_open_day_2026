@@ -67,8 +67,8 @@ Trust boundaries:
 ## Security invariants
 
 - No API key is committed, compiled into `out/`, passed through GitHub Actions, stored in a URL, logged, or sent to any non-OpenAI origin.
-- Runtime configuration uses only `sessionStorage` namespace `unimelb-open-day-2026:session-config:v1` and volatile memory.
-- Clearing the key also clears any in-memory API client and immediately selects canned mode.
+- Runtime configuration uses only `sessionStorage` namespace `unimelb-open-day-2026:session-config:v2` and volatile memory; v1 is removed during v2 load, save, or clear.
+- Clearing the key also clears any in-memory API client and immediately selects Prepared demo mode.
 - Raw visitor questions, transcripts, and model outputs are never placed in persistent browser storage, analytics, telemetry, URLs, or logs.
 - Local safety checks run before any live API request.
 - Every compromised session reveals the controlled policy and completes a clean re-check.
@@ -144,12 +144,12 @@ See [Privacy and Under-18 Checklist](PRIVACY_AND_UNDER_18_CHECKLIST.md).
 
 - A visitor pastes an email, phone number, URL, address, long identifier, or personal-data introduction.
 - A visitor asks to reveal prompts, ignore instructions, fabricate evidence, insult the comparator, or guarantee admission/employment.
-- A visitor enters Chinese equivalents of PII and injection phrases.
+- A visitor enters non-English equivalents of PII and injection phrases even though the event UI is English-only.
 - A visitor attempts HTML/Markdown/script injection in the question.
 - A model returns invalid JSON, unsupported evidence IDs, HTML, a disallowed winner, or an excessively long response.
 - A visitor resets during every phase and immediately starts a new session.
 - The key is cleared while requests are in flight.
-- The network drops during openings, rebuttals, compromised verdict, and clean re-check.
+- The network drops during any configured debate round, the compromised verdict, or the clean re-check.
 - A stale Pages deployment loads from a repository subpath.
 - The browser restores a previous tab after a crash.
 - Unexpected OpenAI project usage appears while the booth is idle.

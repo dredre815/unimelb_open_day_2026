@@ -101,36 +101,35 @@ async function readPackages(filePath: string): Promise<LocatedPackage[]> {
   });
 }
 
-async function collectEvidenceIds(): Promise<Set<string>> {
+async function collectEvidenceInstitutions(): Promise<Map<string, string>> {
   const files = (await listJsonFiles(evidenceRoot)).filter(
     (file) => dirname(file) === evidenceRoot,
   );
-  const ids = new Set<string>();
+  const institutions = new Map<string, string>();
 
   for (const file of files) {
     const value = JSON.parse(await readFile(file, "utf8")) as {
-      facts?: Array<{ id?: unknown }>;
+      facts?: Array<{ id?: unknown; institutionId?: unknown }>;
     };
     for (const fact of value.facts ?? []) {
-      if (typeof fact.id === "string") ids.add(fact.id);
+      if (typeof fact.id !== "string" || typeof fact.institutionId !== "string") continue;
+      if (institutions.has(fact.id)) {
+        throw new Error(`Duplicate evidence id: ${fact.id}.`);
+      }
+      institutions.set(fact.id, fact.institutionId);
     }
   }
 
-  return ids;
+  return institutions;
 }
 
 function collectReferencedEvidenceIds(fallback: FallbackPackage): Set<string> {
   const ids = new Set<string>();
-  const turns = [
-    fallback.openings.unimelb,
-    fallback.openings.competitor,
-    fallback.rebuttals.unimelb,
-    fallback.rebuttals.competitor,
-  ];
-
-  for (const turn of turns) {
-    for (const claim of turn.claims) {
-      for (const id of claim.evidenceIds) ids.add(id);
+  for (const round of fallback.rounds) {
+    for (const turn of Object.values(round.turns)) {
+      for (const claim of turn.claims) {
+        for (const id of claim.evidenceIds) ids.add(id);
+      }
     }
   }
   for (const check of fallback.compromisedVerdict.evidenceChecks) {
@@ -142,7 +141,7 @@ function collectReferencedEvidenceIds(fallback: FallbackPackage): Set<string> {
 
 function validatePackageInvariants(
   located: LocatedPackage,
-  evidenceIds: Set<string>,
+  evidenceInstitutions: Map<string, string>,
   compromiseFragment: string,
 ): void {
   const fallback = located.package;
@@ -154,23 +153,54 @@ function validatePackageInvariants(
   if (normalizeText(fallback.integrityReveal.compromisedLine) !== compromiseFragment) {
     throw new Error(`${label} does not contain the exact compromised policy fragment.`);
   }
+  if (fallback.language === "en" && fallback.rounds.length !== 5) {
+    throw new Error(`${label} must provide exactly five prepared English rounds.`);
+  }
 
-  const turns = [
-    fallback.openings.unimelb,
-    fallback.openings.competitor,
-    fallback.rebuttals.unimelb,
-    fallback.rebuttals.competitor,
-  ];
-  for (const turn of turns) {
-    for (const claim of turn.claims) {
-      if (claim.kind === "fact" && claim.evidenceIds.length === 0) {
-        throw new Error(`${label} contains a factual claim without an evidence id.`);
+  for (const advocate of ["unimelb", "competitor"] as const) {
+    const messages = new Set<string>();
+    for (const round of fallback.rounds) {
+      const turn = round.turns[advocate];
+      const normalizedMessage = normalizeText(turn.message).toLocaleLowerCase();
+      if (messages.has(normalizedMessage)) {
+        throw new Error(`${label} repeats the ${advocate} message in round ${round.roundIndex}.`);
+      }
+      messages.add(normalizedMessage);
+
+      for (const claim of turn.claims) {
+        if (claim.kind === "fact" && claim.evidenceIds.length === 0) {
+          throw new Error(`${label} contains a factual claim without an evidence id.`);
+        }
+        for (const id of claim.evidenceIds) {
+          const institutionId = evidenceInstitutions.get(id);
+          const expectedInstitutionId =
+            advocate === "unimelb" ? "unimelb" : "victorian-university-b";
+          if (institutionId && institutionId !== expectedInstitutionId) {
+            throw new Error(
+              `${label} ${advocate} round ${round.roundIndex} cites ${id} from ${institutionId}.`,
+            );
+          }
+        }
+      }
+    }
+  }
+
+  for (const check of fallback.compromisedVerdict.evidenceChecks) {
+    if (check.status === "supported" && check.evidenceIds.length === 0) {
+      throw new Error(`${label} contains a supported check without an evidence id.`);
+    }
+    for (const id of check.evidenceIds) {
+      const institutionId = evidenceInstitutions.get(id);
+      const expectedInstitutionId =
+        check.speaker === "unimelb" ? "unimelb" : "victorian-university-b";
+      if (institutionId && institutionId !== expectedInstitutionId) {
+        throw new Error(`${label} ${check.speaker} evidence check cites ${id} from ${institutionId}.`);
       }
     }
   }
 
   const unknownIds = [...collectReferencedEvidenceIds(fallback)].filter(
-    (id) => !evidenceIds.has(id),
+    (id) => !evidenceInstitutions.has(id),
   );
   if (unknownIds.length > 0) {
     throw new Error(`${label} references unknown evidence ids: ${unknownIds.join(", ")}.`);
@@ -187,7 +217,7 @@ async function main(): Promise<void> {
   }
 
   const locatedPackages = (await Promise.all(files.map(readPackages))).flat();
-  const evidenceIds = await collectEvidenceIds();
+  const evidenceInstitutions = await collectEvidenceInstitutions();
   const compromiseFragment = normalizeText(await readFile(compromisePromptPath, "utf8"));
   const packageIds = new Set<string>();
   const languageCategories = new Set<string>();
@@ -204,7 +234,7 @@ async function main(): Promise<void> {
       throw new Error(`Duplicate fallback language/category: ${combination}.`);
     }
     languageCategories.add(combination);
-    validatePackageInvariants(located, evidenceIds, compromiseFragment);
+    validatePackageInvariants(located, evidenceInstitutions, compromiseFragment);
   }
 
   const missing = supportedLanguages.flatMap((language) =>

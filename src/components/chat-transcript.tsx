@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { MessageSquareTextIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -8,6 +9,8 @@ import type { AdvocateId, DebateTurn } from "@/types/debate";
 export interface TranscriptMessage {
   agent: AdvocateId;
   turnKind: "opening" | "rebuttal";
+  roundIndex: number;
+  roundCount: number;
   turn: DebateTurn;
 }
 
@@ -18,6 +21,14 @@ interface ChatTranscriptProps {
 
 export function ChatTranscript({ question, messages }: ChatTranscriptProps) {
   const reducedMotion = useReducedMotion();
+  const latestMessageRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    latestMessageRef.current?.scrollIntoView({
+      behavior: reducedMotion ? "auto" : "smooth",
+      block: "nearest",
+    });
+  }, [messages.length, reducedMotion]);
 
   return (
     <section className="glass-panel flex min-h-0 flex-col overflow-hidden rounded-2xl" aria-labelledby="transcript-heading">
@@ -36,7 +47,8 @@ export function ChatTranscript({ question, messages }: ChatTranscriptProps) {
             const melbourne = message.agent === "unimelb";
             return (
               <motion.article
-                key={`${message.agent}-${message.turnKind}-${index}`}
+                key={`${message.roundIndex}-${message.agent}`}
+                ref={index === messages.length - 1 ? latestMessageRef : undefined}
                 initial={reducedMotion ? false : { opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.28 }}
@@ -51,7 +63,9 @@ export function ChatTranscript({ question, messages }: ChatTranscriptProps) {
                   <span className={cn("text-xs font-bold uppercase tracking-wider", melbourne ? "text-blue-200" : "text-violet-200")}>
                     {melbourne ? "Melbourne advocate" : "Comparator advocate"}
                   </span>
-                  <span className="text-xs text-muted-foreground">{message.turnKind}</span>
+                  <span className="text-xs text-muted-foreground">
+                    Round {message.roundIndex}/{message.roundCount} · {message.turnKind}
+                  </span>
                 </div>
                 <p className="text-sm leading-relaxed text-slate-100">{message.turn.message}</p>
                 {message.turn.claims.some((claim) => claim.evidenceIds.length > 0) ? (

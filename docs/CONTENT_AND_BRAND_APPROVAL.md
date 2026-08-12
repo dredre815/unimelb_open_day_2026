@@ -126,7 +126,7 @@ For every institution:
 - [ ] Opinions and recommendations are labelled as opinions or criterion-dependent judgements.
 - [ ] Invalid or model-invented evidence IDs are displayed as unsupported, never verified.
 - [ ] The source drawer does not navigate the kiosk away from the demo.
-- [ ] Chinese content has been reviewed for meaning, tone, and factual parity rather than only literal translation.
+- [ ] The event UI is English-only. Any retained non-visible translations are not presented as an approved visitor experience.
 
 Exclude from the public P0 evidence and fallback content unless separately approved with current, methodologically comparable official sources:
 
@@ -148,9 +148,9 @@ Evidence review register:
 ## Sample questions and canned responses
 
 - [ ] All six required sample questions are present in English.
-- [ ] Approved Chinese versions are present when bilingual mode is enabled.
+- [ ] No language selector or partial translation is visible in the event build.
 - [ ] Canned packages cover IT/computer science, cybersecurity, campus beauty, flexibility, student life, undecided students, career preparation, best overall, injection attempts, and off-topic questions.
-- [ ] Every canned package includes openings, rebuttals, compromised verdict, checks, integrity reveal, and fair verdict.
+- [ ] Every prepared package includes five distinct debate rounds, compromised verdict, checks, integrity reveal, and fair verdict.
 - [ ] Canned and live modes use the same visible sequence and disclosures.
 - [ ] Canned responses contain no placeholder facts, unapproved claims, or disparagement.
 - [ ] Fallback content has a named reviewer and review date.

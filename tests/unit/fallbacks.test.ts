@@ -15,12 +15,7 @@ import { FallbackCatalogSchema } from "@/lib/schemas";
 import { FALLBACK_CATEGORIES, type FallbackPackage } from "@/types/debate";
 
 function referencedEvidenceIds(fallback: FallbackPackage): string[] {
-  const turns = [
-    fallback.openings.unimelb,
-    fallback.openings.competitor,
-    fallback.rebuttals.unimelb,
-    fallback.rebuttals.competitor,
-  ];
+  const turns = fallback.rounds.flatMap((round) => Object.values(round.turns));
   return [
     ...turns.flatMap((turn) => turn.claims.flatMap((claim) => claim.evidenceIds)),
     ...fallback.compromisedVerdict.evidenceChecks.flatMap((check) => check.evidenceIds),
@@ -54,17 +49,33 @@ describe("prepared fallback catalogs", () => {
     }
   });
 
+  it("provides five distinct prepared English rounds for every category", () => {
+    for (const fallback of english) {
+      expect(fallback.rounds, fallback.id).toHaveLength(5);
+      expect(fallback.rounds.map((round) => round.roundIndex), fallback.id).toEqual([
+        1, 2, 3, 4, 5,
+      ]);
+      expect(fallback.rounds.map((round) => round.turnKind), fallback.id).toEqual([
+        "opening",
+        "rebuttal",
+        "rebuttal",
+        "rebuttal",
+        "rebuttal",
+      ]);
+
+      for (const advocate of ["unimelb", "competitor"] as const) {
+        const messages = fallback.rounds.map((round) => round.turns[advocate].message);
+        expect(new Set(messages).size, `${fallback.id}: ${advocate}`).toBe(5);
+      }
+    }
+  });
+
   it("binds every fallback fact and supported check to approved evidence", () => {
     for (const fallback of allPackages) {
       expect(fallback.compromisedVerdict.winner, fallback.id).toBe("unimelb");
       expect(fallback.integrityReveal.compromisedLine, fallback.id).toBe(COMPROMISE_FRAGMENT);
 
-      for (const turn of [
-        fallback.openings.unimelb,
-        fallback.openings.competitor,
-        fallback.rebuttals.unimelb,
-        fallback.rebuttals.competitor,
-      ]) {
+      for (const turn of fallback.rounds.flatMap((round) => Object.values(round.turns))) {
         for (const claim of turn.claims) {
           if (claim.kind === "fact") {
             expect(claim.evidenceIds.length, `${fallback.id}: ${claim.text}`).toBeGreaterThan(0);
@@ -86,10 +97,9 @@ describe("prepared fallback catalogs", () => {
 
   it("maps generic comparator evidence to Monash in named mode", () => {
     const fallback = getFallbackPackage("it_computing", "en", "monash");
-    const competitorIds = [
-      ...fallback.openings.competitor.claims,
-      ...fallback.rebuttals.competitor.claims,
-    ].flatMap((claim) => claim.evidenceIds);
+    const competitorIds = fallback.rounds.flatMap((round) =>
+      round.turns.competitor.claims.flatMap((claim) => claim.evidenceIds),
+    );
 
     expect(competitorIds.length).toBeGreaterThan(0);
     expect(competitorIds.every((id) => id.startsWith("MO-"))).toBe(true);
@@ -100,10 +110,9 @@ describe("prepared fallback catalogs", () => {
 
   it("maps the combined campus fallback claim to both official Monash sources", () => {
     const fallback = getFallbackPackage("campus", "en", "monash");
-    const competitorIds = [
-      ...fallback.openings.competitor.claims,
-      ...fallback.rebuttals.competitor.claims,
-    ].flatMap((claim) => claim.evidenceIds);
+    const competitorIds = fallback.rounds.flatMap((round) =>
+      round.turns.competitor.claims.flatMap((claim) => claim.evidenceIds),
+    );
 
     expect(competitorIds).toEqual(
       expect.arrayContaining(["MO-CAMPUS-01", "MO-CAMPUS-02"]),

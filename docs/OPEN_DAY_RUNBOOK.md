@@ -11,7 +11,7 @@ Assign named people before the event. One person may hold multiple roles, but ow
 | Role | Responsibility | Assigned person |
 | --- | --- | --- |
 | Demo owner | Go/no-go decision and escalation |  |
-| Kiosk operator | Setup, visitor supervision, reset, mode switches |  |
+| Kiosk operator | Operator setup, visitor supervision, reset, mode switches |  |
 | API-key custodian | Create, restrict, monitor, and revoke the event key |  |
 | Content/brand approver | Evidence, comparator, copy, and assets |  |
 | Privacy contact | Collection notice and under-18 arrangement |  |
@@ -26,7 +26,7 @@ Do not use live mode publicly until every gate is complete.
 - [ ] The GitHub Pages deployment workflow passes for the release commit.
 - [ ] The final Pages URL is tested on the actual school laptop and event network.
 - [ ] Both target viewports, keyboard controls, reduced motion, full-screen mode, and reset are verified.
-- [ ] Canned mode completes the full compromised → X-Ray → clean re-check narrative with no key.
+- [ ] Prepared demo mode completes the full first verdict → visitor challenge → X-Ray → visitor-triggered clean re-check narrative with no key.
 - [ ] Live mode completes the same narrative with the event key.
 - [ ] Content, comparator, brand, privacy, under-18, and accessibility approvals are recorded.
 - [ ] The named comparator and branded-assets switches match their approval status.
@@ -40,7 +40,7 @@ Do not use live mode publicly until every gate is complete.
 - [ ] Review every evidence URL against the current official source.
 - [ ] Remove stale, ambiguous, or no-longer-public facts.
 - [ ] Confirm every displayed evidence item is marked safe for public comparison.
-- [ ] Review English and Chinese canned packages for factual parity and respectful tone.
+- [ ] Review the visible English prepared packages for factual accuracy and respectful tone. Retained non-visible language assets are not part of the event experience.
 - [ ] Confirm the compromised verdict acknowledges a comparator strength and makes no absolute claim.
 - [ ] Confirm the X-Ray always reveals the exact demo-only compromised policy.
 - [ ] Confirm the clean verifier permits either institution, `tie`, or `depends`.
@@ -88,11 +88,11 @@ Then:
 - [ ] Deploy through `.github/workflows/deploy-pages.yml`.
 - [ ] Record the deployed commit SHA and final Pages URL.
 - [ ] Open the final URL and check that all scripts, fonts, images, and navigation load under the repository base path.
-- [ ] Run one full canned session at 1920×1080 and one at 1366×768.
+- [ ] Run one full Prepared demo session at 1920×1080 and one at 1366×768.
 - [ ] Confirm there is no horizontal or unwanted page scrolling at 100% zoom.
 - [ ] Confirm page refresh and direct navigation work at the Pages URL.
 - [ ] Confirm the setup panel contains no prefilled or cached key.
-- [ ] Confirm **Clear key** immediately shows canned mode.
+- [ ] Confirm **Clear key** immediately shows Prepared demo mode.
 - [ ] Confirm reset removes the visitor question, transcript, verdicts, and derived output.
 - [ ] Confirm a second visitor cannot see the previous visitor's content.
 - [ ] Confirm common PII, unsafe-content, off-topic, and prompt-injection examples are blocked before a live call.
@@ -111,15 +111,16 @@ Then:
 6. Leave developer tools closed while a key is present.
 7. Keep the browser window attended from this point onward.
 
-### 2. Canned rehearsal
+### 2. Prepared demo rehearsal
 
-1. Open **Setup**.
-2. Verify the key field is empty and mode is **Canned**.
-3. Select the final comparator, language, free-text, and compromised/fair switches.
-4. Save, run a sample chip, and watch the entire narrative.
-5. Verify X-Ray wording, clean re-check, final takeaway, and auto-reset.
+1. Open **Operator setup**.
+2. Verify the key field is empty and Generation is **Prepared demo (recommended)**.
+3. Select the final comparator, visitor input, demo story, and debate rounds. Use the default 2 rounds unless the longer duration and API cost have been approved and rehearsed.
+4. Save, select an English sample chip, and watch all debate messages reveal at least two seconds apart.
+5. Verify at least three seconds of visible Judge deliberation, then use **Really? Inspect the judge** and **Run a clean re-check** to complete the narrative.
+6. Verify X-Ray wording, final takeaway, reset, and the selected question-chip state.
 
-If canned mode fails, do not proceed to live mode. Use the printed explanation until the release is repaired and re-verified.
+If Prepared demo mode fails, do not proceed to live mode. Use the printed explanation until the release is repaired and re-verified.
 
 ### 3. Create and restrict the event key
 
@@ -135,7 +136,7 @@ The key has no automatic safety merely because it is short-lived. Manual revocat
 
 ### 4. Configure live mode
 
-1. Open **Setup**.
+1. Open **Operator setup**.
 2. Paste the key into the masked field.
 3. Read and accept the client-side key risk acknowledgement.
 4. Confirm the role configuration:
@@ -143,7 +144,7 @@ The key has no automatic safety merely because it is short-lived. Manual revocat
    - compromised verifier: `gpt-5.6-terra`, reasoning `low` by default;
    - clean verifier pair: `gpt-5.6-terra`, reasoning `low` by default.
 5. Confirm each selected reasoning effort is supported by its model.
-6. Select **Live** and save the tab-scoped configuration.
+6. Select **Live AI**, choose 2–5 debate rounds, and save the tab-scoped configuration. Before retries, a compromised flow makes `2 × rounds + 3` model calls; Fair only makes `2 × rounds + 2`.
 7. Run one sample question and one approved free-text question.
 8. Confirm model failures recover into the canned flow without leaking the key or raw error details.
 9. Confirm the API project shows only the expected event activity.
@@ -153,7 +154,7 @@ The key has no automatic safety merely because it is short-lived. Manual revocat
 - [ ] Return to the attract screen with no previous visitor content.
 - [ ] Set browser zoom to 100% and enter full screen.
 - [ ] Verify the visible privacy disclosure.
-- [ ] Keep **Setup** and **Reset** accessible to the operator.
+- [ ] Keep the `Ctrl+Shift+D` Operator setup shortcut and **New question** accessible to the operator.
 - [ ] Place the operator where they can stop personal-information entry and respond immediately.
 - [ ] Record the opening time; do not record visitor questions.
 
@@ -167,7 +168,7 @@ The key has no automatic safety merely because it is short-lived. Manual revocat
 - Use chips-only mode for visitors under 13 unless an approved alternative arrangement is in place.
 - Watch each compromised session through the X-Ray and clean re-check. Reset any session that does not reveal the manipulation.
 - Check only aggregate API usage, latency, fallback rate, and error category. Do not record raw questions or model output.
-- Periodically run a canned sample to ensure fallback remains available.
+- Periodically run a Prepared demo sample to ensure fallback remains available.
 - Do not open developer tools, browser settings, password managers, or unrelated sites while the key is present.
 
 ### Facilitator script
@@ -199,7 +200,7 @@ Closing:
 Examples include an unmasked field, open developer tools, suspicious extension activity, accidental paste, screenshot, unexpected usage, or a visitor gaining device access.
 
 1. Select **Clear key** immediately.
-2. Switch to canned mode.
+2. Switch to Prepared demo mode.
 3. Revoke the key in the OpenAI project immediately; closing the browser is not sufficient.
 4. Confirm no further usage occurs.
 5. Notify the demo owner and follow the University's security incident process.
@@ -218,22 +219,22 @@ Examples include an unmasked field, open developer tools, suspicious extension a
 
 1. Reset the display and do not continue the debate.
 2. Direct a visitor in distress to booth staff and the appropriate on-site support process; the demo is not a support service.
-3. Switch to chips-only or canned mode.
+3. Switch to question chips or Prepared demo mode.
 4. Record only the error category needed for review.
 
 ### Network, API, quota, latency, or model failure
 
-1. Switch to canned mode; do not repeatedly retry a failing live request.
+1. Switch to Prepared demo mode; do not repeatedly retry a failing live request.
 2. Check the aggregate health indicator and project usage from an operator device.
 3. Use the backup network only if it was pre-approved and tested.
-4. Keep the visitor-facing narrative moving with canned content.
+4. Keep the visitor-facing narrative moving with prepared content.
 5. Do not expose raw API errors or credentials while troubleshooting.
 
 ### Deployment or integrity concern
 
 Examples include an unexpected prompt hash, unfamiliar UI, failed GitHub workflow, changed release SHA, or suspected repository compromise.
 
-1. Stop using the site, including canned mode, because the static bundle itself may be untrusted.
+1. Stop using the site, including Prepared demo mode, because the static bundle itself may be untrusted.
 2. Clear and revoke the key.
 3. Use the printed explanation.
 4. Compare the deployed workflow and commit with the recorded release.
@@ -242,7 +243,7 @@ Examples include an unexpected prompt hash, unfamiliar UI, failed GitHub workflo
 ### Content or brand concern
 
 1. Switch to the generic comparator and unbranded text/letter-avatar mode.
-2. Use chips-only/canned content already approved.
+2. Use approved question-chip and Prepared demo content.
 3. Escalate to the content/brand approver before restoring the questioned material.
 
 ## End-of-day shutdown
@@ -250,8 +251,8 @@ Examples include an unexpected prompt hash, unfamiliar UI, failed GitHub workflo
 Perform these steps even if the event will continue another day. Use a newly approved key for each event day where practical.
 
 1. Stop visitor access and exit full screen.
-2. Open **Setup** and select **Clear key**.
-3. Confirm the interface reports canned mode and an empty key field.
+2. Open **Operator setup** and select **Clear key**.
+3. Confirm the interface reports Prepared demo mode and an empty key field.
 4. Close every tab and the dedicated browser profile.
 5. Revoke the event key in the OpenAI project.
 6. Confirm revocation and review aggregate usage for anomalies.

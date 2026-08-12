@@ -17,6 +17,9 @@ import {
   type SessionTelemetryInput,
 } from "@/lib/telemetry";
 
+const LEGACY_SESSION_CONFIG_STORAGE_KEY =
+  "unimelb-open-day-2026:session-config:v1";
+
 function liveConfig(): SessionConfig {
   return {
     ...structuredClone(DEFAULT_SESSION_CONFIG),
@@ -32,29 +35,87 @@ describe("session-scoped runtime configuration", () => {
     vi.restoreAllMocks();
   });
 
-  it("saves, loads, and clears only the versioned sessionStorage entry", () => {
+  it("saves, loads, and clears the v2 entry while removing legacy v1 data", () => {
     const localStorageAccess = vi.spyOn(window, "localStorage", "get");
     const config = liveConfig();
+    window.sessionStorage.setItem(
+      LEGACY_SESSION_CONFIG_STORAGE_KEY,
+      JSON.stringify({ ...config, version: 1 }),
+    );
     const saveResult = saveSessionConfig(config);
 
     expect(saveResult.success).toBe(true);
     expect(saveResult.summary).toMatchObject({
       configured: true,
       runtimeMode: "live",
+      debateRoundCount: 2,
     });
     expect(saveResult.summary?.maskedApiKey).not.toContain(config.apiKey);
     expect(window.sessionStorage.length).toBe(1);
+    expect(SESSION_CONFIG_STORAGE_KEY).toContain(":v2");
     expect(window.sessionStorage.getItem(SESSION_CONFIG_STORAGE_KEY)).toBeTruthy();
+    expect(window.sessionStorage.getItem(LEGACY_SESSION_CONFIG_STORAGE_KEY)).toBeNull();
+
+    window.sessionStorage.setItem(LEGACY_SESSION_CONFIG_STORAGE_KEY, "legacy");
     expect(loadSessionConfig()).toEqual(config);
+    expect(window.sessionStorage.getItem(LEGACY_SESSION_CONFIG_STORAGE_KEY)).toBeNull();
     expect(localStorageAccess).not.toHaveBeenCalled();
 
+    window.sessionStorage.setItem(LEGACY_SESSION_CONFIG_STORAGE_KEY, "legacy");
     expect(clearSessionConfig()).toBe(true);
     expect(loadSessionConfig()).toBeNull();
+    expect(window.sessionStorage.getItem(LEGACY_SESSION_CONFIG_STORAGE_KEY)).toBeNull();
     expect(localStorageAccess).not.toHaveBeenCalled();
   });
 
+  it("ignores and removes a legacy-only configuration", () => {
+    window.sessionStorage.setItem(
+      LEGACY_SESSION_CONFIG_STORAGE_KEY,
+      JSON.stringify({ ...DEFAULT_SESSION_CONFIG, version: 1 }),
+    );
+
+    expect(loadSessionConfig()).toBeNull();
+    expect(window.sessionStorage.getItem(LEGACY_SESSION_CONFIG_STORAGE_KEY)).toBeNull();
+  });
+
+  it("keeps v2 operations usable when legacy cleanup is blocked", () => {
+    const config = liveConfig();
+    const values = new Map<string, string>([
+      [SESSION_CONFIG_STORAGE_KEY, JSON.stringify(config)],
+      [LEGACY_SESSION_CONFIG_STORAGE_KEY, "legacy"],
+    ]);
+    const storage: Storage = {
+      get length() {
+        return values.size;
+      },
+      clear() {
+        values.clear();
+      },
+      getItem(key) {
+        return values.get(key) ?? null;
+      },
+      key(index) {
+        return [...values.keys()][index] ?? null;
+      },
+      removeItem(key) {
+        if (key === LEGACY_SESSION_CONFIG_STORAGE_KEY) {
+          throw new Error("Legacy cleanup blocked");
+        }
+        values.delete(key);
+      },
+      setItem(key, value) {
+        values.set(key, value);
+      },
+    };
+
+    expect(loadSessionConfig(storage)).toEqual(config);
+    expect(saveSessionConfig(config, storage).success).toBe(true);
+    expect(clearSessionConfig(storage)).toBe(false);
+    expect(values.has(SESSION_CONFIG_STORAGE_KEY)).toBe(false);
+  });
+
   it("clears the API key while preserving safe settings in canned mode", () => {
-    const config = { ...liveConfig(), demoMode: "fair" as const, bilingualMode: false };
+    const config = { ...liveConfig(), demoMode: "fair" as const, debateRoundCount: 5 };
     expect(saveSessionConfig(config).success).toBe(true);
     expect(clearApiKey()).toBe(true);
 
@@ -62,7 +123,7 @@ describe("session-scoped runtime configuration", () => {
       apiKey: "",
       runtimeMode: "canned",
       demoMode: "fair",
-      bilingualMode: false,
+      debateRoundCount: 5,
     });
   });
 
@@ -75,6 +136,13 @@ describe("session-scoped runtime configuration", () => {
       JSON.stringify({ ...DEFAULT_SESSION_CONFIG, runtimeMode: "live", apiKey: "invalid" }),
     );
     expect(loadSessionConfig()).toBeNull();
+  });
+
+  it("accepts only two to five debate rounds", () => {
+    expect(saveSessionConfig({ ...DEFAULT_SESSION_CONFIG, debateRoundCount: 2 }).success).toBe(true);
+    expect(saveSessionConfig({ ...DEFAULT_SESSION_CONFIG, debateRoundCount: 5 }).success).toBe(true);
+    expect(saveSessionConfig({ ...DEFAULT_SESSION_CONFIG, debateRoundCount: 1 }).success).toBe(false);
+    expect(saveSessionConfig({ ...DEFAULT_SESSION_CONFIG, debateRoundCount: 6 }).success).toBe(false);
   });
 });
 

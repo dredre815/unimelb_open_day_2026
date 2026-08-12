@@ -15,7 +15,7 @@ The concepts are layout and styling references. Interactive text, controls, evid
 - Theme: premium cybersecurity control room crossed with a messaging interface.
 - Background: true dark navy, never cream or warm black.
 - Composition: open full-screen bands and rails; avoid nested card grids.
-- Primary focal motif: three connected agent nodes and one horizontal verifier rail.
+- Primary focal motif: three connected agent nodes and one staged story rail.
 - Density: medium on active screens, low on the attract screen.
 - Motion: travelling connection trace, status-ring pulse, message entrance, localised failure glitch, and stable clean-verifier shield.
 
@@ -56,7 +56,7 @@ Spacing uses a 4px base with primary steps of 8, 12, 16, 24, 32, and 48px. Major
 
 - App shell: fixed viewport-height canvas with a quiet header.
 - Attract state: open central stage, one question-chip rail, one composer rail.
-- Debate state: two narrow advocate rails around a wide transcript, followed by one verifier/X-Ray rail.
+- Debate state: two narrow advocate rails around a wide transcript, followed by one staged verdict/reveal/clean-result rail.
 - Setup state: one full-width configuration surface with bands and table-like rows.
 - Tablet fallback: agent summaries become a two-column row above the transcript; verifier rail stays visible below it.
 
@@ -66,8 +66,8 @@ Spacing uses a 4px base with primary steps of 8, 12, 16, 24, 32, and 48px. Major
 - `AgentNode`: letter/shield avatar, status ring, role, evidence list.
 - `ConnectionField`: decorative SVG paths with reduced-motion fallback.
 - `QuestionComposer`: sample chips, free-text input, disclosure, primary action.
-- `Transcript`: visitor question and four attributed debate messages.
-- `VerifierRail`: compromised verdict, evidence summary, integrity result, X-Ray diff, and clean order test.
+- `Transcript`: visitor question and 4–10 attributed debate messages, labelled by round and automatically scrolled to the newest reveal.
+- `DebateStory`: visible Judge deliberation, controlled first verdict, visitor challenge, X-Ray diff, visitor-triggered clean re-check, and final result.
 - `SetupPanel`: temporary key controls, agent configuration rows, global runtime switches, save action.
 - `SourceDrawer`: in-app evidence details; never navigates the kiosk away.
 - `FinalTakeaway`: final fair verdict and security lesson.
@@ -83,19 +83,21 @@ Attract-screen copy is limited to:
 - `University of Melbourne`
 - `TRUST THE VERDICT?`
 - `Three AIs. One hidden instruction.`
-- `Setup`
-- `Ready` or an equivalent real connection state
+- `Operator setup`
+- `Prepared demo` or `Live AI`
 - The six specified university-comparison sample questions
 - `Start Debate`
 - `Educational AI demo. Please do not enter personal information.`
 
-The X-Ray must include:
+The staged story must include:
 
-- `Facts checked`
-- `Policy integrity: FAILED`
+- `Verifier / Judge is deciding…`
+- `Not the final fair result`
+- `Really? Inspect the judge`
+- `Decision policy failed`
 - `The debate did not change. The hidden objective did.`
-- `DEMO-ONLY COMPROMISED POLICY`
-- `Clean re-checking the unchanged debate...`
+- `Run a clean re-check`
+- `Clean result`
 
 Do not add a hero eyebrow, promotional badge, fake metric, ranking, ATAR, fee, salary, employment rate, guarantee, or unsupported university claim.
 
@@ -105,9 +107,12 @@ Do not add a hero eyebrow, promotional badge, fake metric, ranking, ATAR, fee, s
 - Reasoning choices: `none`, `low`, `medium`, `high`, `xhigh`, `max`.
 - Default advocates: Luna / none.
 - Default compromised and clean verifiers: Terra / low.
+- Debate rounds: 2–5, default 2. Each round contains one response from each advocate.
+- Pacing is fixed, not configurable: advocate messages are at least two seconds apart and Judge deliberation is visible for at least three seconds.
+- Visitor UI is English-only for this event.
 - The API key field is masked by default and requires explicit client-side risk acknowledgement before live mode can be saved.
 - Key and runtime settings use `sessionStorage`; never `localStorage`, a URL, telemetry, logs, source files, or rendered debug output.
-- Clearing the key immediately returns the session to canned mode.
+- Clearing the key immediately returns the session to Prepared demo mode.
 
 ## Responsive and accessibility rules
 

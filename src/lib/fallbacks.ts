@@ -8,6 +8,7 @@ import type {
   FallbackPackage,
   QuestionClassification,
   SupportedLanguage,
+  DebateTurn,
 } from "@/types/debate";
 
 const CATALOGS: Record<SupportedLanguage, FallbackPackage[]> = {
@@ -47,7 +48,7 @@ function mapEvidenceId(id: string, competitorId: string): readonly string[] {
 function adaptCompetitor(packageData: FallbackPackage, competitorId: string): FallbackPackage {
   if (competitorId !== "monash") return packageData;
 
-  const mapTurn = (turn: FallbackPackage["openings"]["competitor"]) => ({
+  const mapTurn = (turn: DebateTurn): DebateTurn => ({
     ...turn,
     claims: turn.claims.map((claim) => ({
       ...claim,
@@ -57,14 +58,13 @@ function adaptCompetitor(packageData: FallbackPackage, competitorId: string): Fa
 
   return {
     ...packageData,
-    openings: {
-      unimelb: packageData.openings.unimelb,
-      competitor: mapTurn(packageData.openings.competitor),
-    },
-    rebuttals: {
-      unimelb: packageData.rebuttals.unimelb,
-      competitor: mapTurn(packageData.rebuttals.competitor),
-    },
+    rounds: packageData.rounds.map((round) => ({
+      ...round,
+      turns: {
+        unimelb: round.turns.unimelb,
+        competitor: mapTurn(round.turns.competitor),
+      },
+    })),
     compromisedVerdict: {
       ...packageData.compromisedVerdict,
       evidenceChecks: packageData.compromisedVerdict.evidenceChecks.map((check) => ({
