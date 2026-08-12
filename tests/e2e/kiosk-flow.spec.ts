@@ -154,9 +154,13 @@ test("does not reveal a saved key and cancels an in-flight connection test when 
 test("clearing the key aborts an active live session before further model calls", async ({ page }) => {
   await installLiveSession(page);
   let requestCount = 0;
+  let releaseOpeningResponses: () => void = () => undefined;
+  const openingResponseGate = new Promise<void>((resolve) => {
+    releaseOpeningResponses = () => resolve();
+  });
   await page.route("https://api.openai.com/v1/responses", async (route) => {
     requestCount += 1;
-    await new Promise((resolve) => setTimeout(resolve, 1_000));
+    await openingResponseGate;
     await route.fulfill({
       status: 200,
       contentType: "application/json",
@@ -174,10 +178,15 @@ test("clearing the key aborts an active live session before further model calls"
   await chooseFirstSample(page);
   await page.getByRole("button", { name: "Start Debate" }).click();
   await expect.poll(() => requestCount).toBe(2);
-  await page.getByRole("button", { name: "Setup" }).click();
-  await page.getByRole("button", { name: "Clear key" }).click();
 
-  await expect(page.getByTestId("attract-screen")).toBeVisible();
+  try {
+    await page.getByRole("button", { name: "Setup" }).click();
+    await page.getByRole("button", { name: "Clear key" }).click();
+    await expect(page.getByTestId("attract-screen")).toBeVisible();
+  } finally {
+    releaseOpeningResponses();
+  }
+
   await page.waitForTimeout(1_200);
   expect(requestCount).toBe(2);
 });
